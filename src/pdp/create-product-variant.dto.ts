@@ -9,15 +9,6 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class VariantImageInput {
-  @IsString()
-  url: string;
-
-  @IsOptional()
-  @IsString()
-  alt?: string;
-}
-
 export class CreateProductVariantDto {
   @IsUUID()
   productId: string;
@@ -32,10 +23,12 @@ export class CreateProductVariantDto {
   stock: number;
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => VariantImageInput)
   @IsOptional()
-  images?: VariantImageInput[];
+  optionsIds?: string[];
+
+  @IsArray()
+  @IsOptional()
+  imagesIds?: string[];
 
   @IsArray()
   @IsUUID('4', { each: true })

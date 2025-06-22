@@ -51,28 +51,42 @@ export class PdpService {
         title: productData.title,
         description: productData.description,
         price: productData.price,
-        productImages: {
-            connect: productData.productImageIds.map((id) => ({ id })),
-          },
-         variants: {
-            connect: productData.variantIds.map((id) => ({ id })),
-          },
-          options: {
-            connect: productData.optionIds.map((id) => ({ id })),
-          },
+        productInformation: productData.productInformation,
+        categoryId: productData.categoryId,
       };
-      if(productData.discountIds){
-        productDataObj["discounts"] = {
-            connect: productData.discountIds.map((id) => ({ id })),
-          }
+      if(productData.productImageIds){
+        productDataObj['productImages'] = {
+          connect: productData.productImageIds.map((id)=>({id}))
+        }
       }
-      if(productData.reviewIds){
-        productDataObj["reviews"] = {
-            connect: productData.reviewIds.map((id) => ({ id })),
-          }
+      if (productData.variantIds) {
+        productDataObj['variants'] = {
+          connect: productData.variantIds.map((id) => ({ id })),
+        };
+      }
+      if (productData.optionIds) {
+        productDataObj['options'] = {
+          connect: productData.optionIds.map((id) => ({ id })),
+        };
+      }
+      if (productData.discountIds) {
+        productDataObj['discounts'] = {
+          connect: productData.discountIds.map((id) => ({ id })),
+        };
+      }
+      if (productData.reviewIds) {
+        productDataObj['reviews'] = {
+          connect: productData.reviewIds.map((id) => ({ id })),
+        };
+      }
+      if (productData.isNew) {
+        productDataObj['isNew'] = productData.isNew;
+      }
+      if (productData.isTrending) {
+        productDataObj['isTrending'] = productData.isTrending;
       }
       const product = await this.prismaService.product.create({
-        data: productDataObj
+        data: productDataObj,
       });
       return {
         message: 'Successfully created the product',
@@ -86,18 +100,21 @@ export class PdpService {
 
   async createProductOption(productOptionData: CreateProductOptionDto) {
     try {
-      const productOption = await this.prismaService.productOption.create({
-        data: {
-          name: productOptionData.name,
+      let productOptionObj = {
+         name: productOptionData.name,
           product: {
             connect: {
               id: productOptionData.productId,
             },
           },
-          values: {
-            connect: productOptionData.valuesIds.map((id) => ({ id: id })),
-          },
-        },
+      }
+      if(productOptionData.valuesIds){
+        productOptionObj["values"] = {
+          connect: productOptionData.valuesIds.map((id)=>({id}))
+        }
+      }
+      const productOption = await this.prismaService.productOption.create({
+        data: productOptionObj
       });
       return {
         message: 'Succesfully Created the ProductOption',
@@ -146,63 +163,81 @@ export class PdpService {
     }
   }
 
-  async createProductVariantOption(productVariantOptionData: CreateProductVariantOptionDto){
-    try{
-      const productVariantOption = await this.prismaService.productVariantOption.create({
-        data: {
-          name: productVariantOptionData.name,
-          value: productVariantOptionData.value,
-          product: {
-            connect:{
-              id: productVariantOptionData.productVariantId
-            }
-          }
-        }
-      });
+  async createProductVariantOption(
+    productVariantOptionData: CreateProductVariantOptionDto,
+  ) {
+    try {
+      const productVariantOption =
+        await this.prismaService.productVariantOption.create({
+          data: {
+            name: productVariantOptionData.name,
+            value: productVariantOptionData.value,
+            product: {
+              connect: {
+                id: productVariantOptionData.productVariantId,
+              },
+            },
+          },
+        });
       return {
-        message: "Successfully Created a ProductVariantOption",
-        productVariantOption: productVariantOption
+        message: 'Successfully Created a ProductVariantOption',
+        productVariantOption: productVariantOption,
+      };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw new NotFoundException('404, No Product with the given Id Found!');
       }
-    }
-    catch(e){
-      if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2025"){
-        throw new NotFoundException("404, No Product with the given Id Found!")
-      }
-      throw new InternalServerErrorException("500 Internal Server Error!");
+      throw new InternalServerErrorException('500 Internal Server Error!');
     }
   }
 
-  async createProductVariant(productVariantData: CreateProductVariantDto){
-    try{
-      
+  async createProductVariant(productVariantData: CreateProductVariantDto) {
+    try {
       let productVariantObj = {
-        product:{
+        product: {
           connect: {
-            id: productVariantData.productId
-          }
+            id: productVariantData.productId,
+          },
         },
         sku: productVariantData.sku,
         price: productVariantData.price,
-        stock: productVariantData.stock
+        stock: productVariantData.stock,
       };
 
-      if(productVariantData.cartItemsIds){
-        productVariantObj["cartItemsIds"] = 
+      if(productVariantData.optionsIds) {
+        productVariantObj['options'] = {connect: productVariantData.optionsIds.map((id)=> ({id}))} 
       }
-      if(productVariantData.cartItemsIds)
+      if (productVariantData.cartItemsIds) {
+        productVariantObj['cartItems'] = {
+          connect: productVariantData.cartItemsIds.map((id) => ({ id })),
+        };
+      }
+      if (productVariantData.discountIds) {
+        productVariantObj['discounts'] = {
+          connect: productVariantData.discountIds.map((id) => ({ id })),
+        };
+      }
+      if (productVariantData.imagesIds) {
+        productVariantObj['images'] = productVariantData.imagesIds.map((id)=>({id}));
+      }
       const productVariant = await this.prismaService.productVariant.create({
-        data: {
-          cartItems:{
-            connect: productVariantData.
-          }
-        }
-      })
-    }
-    catch(e){
-      if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025'){
-        throw new NotFoundException("404")
+        data: productVariantObj,
+      });
+      return {
+        message: 'Successfully Created the ProductVariant',
+        productVariant: productVariant,
+      };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw new NotFoundException('404');
       }
-      throw new InternalServerErrorException("500 Internal Server Exception!");
+      throw new InternalServerErrorException('500 Internal Server Exception!');
     }
   }
 }

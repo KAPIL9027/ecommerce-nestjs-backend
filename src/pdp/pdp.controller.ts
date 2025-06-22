@@ -7,6 +7,7 @@ import { CreateProductDto } from './create-product.dto';
 import { CreateProductOptionDto } from './create-product-option.dto';
 import { CreateProductOptionValueDto } from './create-product-option-value.dto';
 import { CreateProductVariantOptionDto } from './create-product-variant-option.dto';
+import { CreateProductVariantDto } from './create-product-variant.dto';
 
 @Controller('pdp')
 export class PdpController {
@@ -51,6 +52,15 @@ export class PdpController {
     @Body() reqBody: CreateProductVariantOptionDto,
   ) {
     return this.pdpService.createProductVariantOption(reqBody);
+  }
+
+  @Post('/create-product-variant')
+  @UseGuards(JWTCookieGuard,RolesGuard)
+  @Roles('ADMIN')
+  async createProductVariant(
+    @Body() reqBody: CreateProductVariantDto
+  ){
+    return this.pdpService.createProductVariant(reqBody);
   }
 
   

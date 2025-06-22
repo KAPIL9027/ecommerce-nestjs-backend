@@ -1,9 +1,10 @@
-import { Injectable, InternalServerErrorException, NotAcceptableException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotAcceptableException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateUserDto } from './create-user.dto';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { ValidateUserDto } from './validate-user.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -38,6 +39,9 @@ export class UserService {
       });
       return token;
     } catch (e) {
+        if(e instanceof Prisma.PrismaClientValidationError){
+          throw new BadRequestException('400 Bad Request, Incorrect Data Provided!')
+        }
         console.error('Create User Request Failed',e);
         throw new InternalServerErrorException('Internal Server Error');
     }

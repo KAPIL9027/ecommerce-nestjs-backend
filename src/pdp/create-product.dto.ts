@@ -6,19 +6,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
-  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-
-class ImageInput {
-  @IsString()
-  @IsNotEmpty()
-  url: string;
-
-  @IsOptional()
-  @IsString()
-  alt?: string;
-}
 
 export class CreateProductDto {
   @IsString()
@@ -38,7 +26,8 @@ export class CreateProductDto {
 
   @IsArray()
   @IsUUID('4', { each: true })
-  productImageIds: string[];
+  @IsOptional()
+  productImageIds?: string[];
 
   @IsString()
   @IsNotEmpty()
@@ -57,11 +46,13 @@ export class CreateProductDto {
 
   @IsArray()
   @IsUUID('4', { each: true })
-  optionIds: string[];
+  @IsOptional()
+  optionIds?: string[];
 
   @IsArray()
   @IsUUID('4', { each: true })
-  variantIds: string[];
+  @IsOptional()
+  variantIds?: string[];
 
   @IsArray()
   @IsUUID('4', { each: true })
