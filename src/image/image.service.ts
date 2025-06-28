@@ -2,12 +2,14 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  NotAcceptableException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreateImageDto } from './create-image.dto';
-import { Image, Prisma } from '@prisma/client';
+import { Category, Image, Prisma, Product } from '@prisma/client';
 import { UpdateImageDto } from './update-image.dto';
+import { Banner, ProductVariant } from 'generated/prisma';
 @Injectable()
 export class ImageService {
   constructor(private readonly prismaService: PrismaService) {}
@@ -75,25 +77,63 @@ export class ImageService {
         if(updateImageData.altText){
             updateImageObj["altText"] = updateImageData.altText
         }
-        // if(updateImageData.relationType){
-        //     switch(updateImageData.relationType){
-        //         case 'PRODUCT':
-                    
-        // }
-        // }
-        
-        const updatedImage = await this.prismaService.image.update({
-            where:{
-                id: imageId
-            },
-            data: 
-        })
+        if(updateImageData.relationType){
+          switch(updateImageData.relationType){
+            case 'PRODUCT':
+              updateImageObj["product"] = {connect: {id: updateImageData.relationId}}
+              break;
+            case 'PRODUCT_VARIANT':
+              updateImageObj["productVariant"] = {connect: {id: updateImageData.relationId}}
+              break;
+            case 'BANNER':
+              updateImageObj["banner"] = {connect: {id: updateImageData.relationId}}
+              break;
+            case 'CATEGORY':
+              updateImageObj["category"] = {connect: {id: updateImageData.relationId}}
+              break;
+            default:
+              throw new NotAcceptableException('Invalid relation-type');
+          }
+        }
+
+        const updatedImageData = await this.prismaService.image.update({
+          where: {
+            id: imageId
+          },
+          data: updateImageObj
+        });
+        return {
+          message: "Successfully updated the image with the given id",
+          updatedImage: updatedImageData
+        }
+       
     }
     catch(e){
         if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025'){
             throw new NotFoundException('404, No Image Found with the provided ID.')
         }
+        console.error('Image Update Service failed',e);
         throw new InternalServerErrorException("500, Internal Server Error Exception");
+    }
+  }
+
+  async deleteImage(imageId: string){
+    try{
+      const deltedImage = await this.prismaService.image.delete({
+        where: {
+          id: imageId
+        }
+      });
+      return {
+        message: "Successfully Deleted the Image",
+        deletedImage: deltedImage
+      }
+    }
+    catch(e){
+      if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025'){
+        throw new  NotFoundException('404, No Image found with the given id')
+      }
+      throw new InternalServerErrorException('500, Internal Server Error!');
     }
   }
 }
