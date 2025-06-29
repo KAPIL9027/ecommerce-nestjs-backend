@@ -29,7 +29,7 @@ model Product {
   options            ProductOption[]
   variants           ProductVariant[]
   reviews            Review[]
-  discounts          Discount[]  @relation("ProductDiscounts")
+  discounts          Discount[]       @relation("ProductDiscounts")
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 }
@@ -58,18 +58,19 @@ model ProductOptionValue {
 }
 
 model ProductVariant {
-  id        String                 @id @default(uuid())
-  productId String
-  product   Product                @relation(fields: [productId], references: [id])
-  cartItems CartItem[]
-  sku       String                 @unique
-  price     Float
-  stock     Int
-  options   ProductVariantOption[]
-  images    Image[]
-  discounts Discount[] @relation("VariantsDiscounts")
-  createdAt DateTime               @default(now())
-  updatedAt DateTime               @updatedAt
+  id         String                 @id @default(uuid())
+  productId  String
+  product    Product                @relation(fields: [productId], references: [id])
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  sku        String                 @unique
+  price      Float
+  stock      Int
+  options    ProductVariantOption[]
+  images     Image[]
+  discounts  Discount[]             @relation("VariantsDiscounts")
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
 }
 
 model Category {
@@ -97,18 +98,21 @@ model Review {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  @@unique([productId,userId])
+
+  @@unique([productId, userId])
 }
 
 model User {
-  id       String   @id @default(uuid())
-  email    String   @unique
-  name     String
-  password String
-  role UserRole @default(USER)
-  reviews  Review[]
-  cart     Cart?
-  discountCode DiscountCode[]
+  id                String            @id @default(uuid())
+  email             String            @unique
+  name              String
+  password          String
+  role              UserRole          @default(USER)
+  reviews           Review[]
+  orders            Order[]
+  cart              Cart?
+  discountCode      DiscountCode[]
+  shippingAddresses ShippingAddress[]
   // Add wishlist, orders etc.
 }
 
@@ -116,7 +120,6 @@ enum UserRole {
   ADMIN
   USER
 }
-
 
 model Cart {
   id        String     @id @default(uuid())
@@ -134,46 +137,45 @@ model CartItem {
   cart      Cart           @relation(fields: [cartId], references: [id])
   quantity  Int
 
-  @@unique([cartId,variantId])
+  @@unique([cartId, variantId])
 }
 
 model Discount {
-  id String @id @default(uuid())
-  title String
+  id          String        @id @default(uuid())
+  title       String
   description String
-  type DiscountType
-  amount Float
-  startDate DateTime
-  endDate DateTime
-  active Boolean @default(false)
-  appliesTo DiscountScope
-  combinable Boolean @default(true)
+  type        DiscountType
+  amount      Float
+  startDate   DateTime
+  endDate     DateTime
+  active      Boolean       @default(false)
+  appliesTo   DiscountScope
+  combinable  Boolean       @default(true)
 
   // Relationships
-  products Product[] @relation("ProductDiscounts")
-  variants ProductVariant[] @relation("VariantsDiscounts")
-  categories Category[] @relation("CategoriesDiscounts")
-  codes DiscountCode[]
+  products   Product[]        @relation("ProductDiscounts")
+  variants   ProductVariant[] @relation("VariantsDiscounts")
+  categories Category[]       @relation("CategoriesDiscounts")
+  codes      DiscountCode[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
 }
 
 model DiscountCode {
-  id String @id @default(uuid())
-  code String @unique
-  description String?
-  expiresAt DateTime?
+  id           String    @id @default(uuid())
+  code         String    @unique
+  description  String?
+  expiresAt    DateTime?
   minCartValue Int?
-  maxUses Int?
-  usedCount Int @default(0)
-  userSpecific Boolean @default(false)
-  discountId String
-  discount Discount @relation(fields:[discountId],references: [id])
-  userId String?
-  user User? @relation(fields:[userId], references: [id])
-  active Boolean @default(true)
+  maxUses      Int?
+  usedCount    Int       @default(0)
+  userSpecific Boolean   @default(false)
+  discountId   String
+  discount     Discount  @relation(fields: [discountId], references: [id])
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id])
+  active       Boolean   @default(true)
 }
 
 enum DiscountType {
@@ -231,6 +233,73 @@ model WidgetItem {
   order     Int
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+}
+
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+  total     Float
+  status    OrderStatus
+  payment   Payment?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model OrderItem {
+  id        String         @id @default(uuid())
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id])
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  price     Float
+}
+
+model Payment {
+  id        String        @id @default(uuid())
+  orderId   String        @unique
+  order     Order         @relation(fields: [orderId], references: [id])
+  provider  String
+  status    PaymentStatus
+  amount    Float
+  createdAt DateTime      @default(now())
+}
+
+model ShippingAddress {
+  id         String  @id @default(uuid())
+  userId     String
+  user       User    @relation(fields: [userId], references: [id])
+  fullName   String
+  address1   String
+  address2   String?
+  city       String
+  state      String
+  country    String
+  postalCode String
+  phone      String
+  isDefault  Boolean @default(false)
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum OrderStatus {
+  PENDING // Order Created, awaiting payment
+  PAID // Payment received
+  CONFIRMED // Order confirmed by seller
+  PROCESSING // Order is being prepared
+  SHIPPED // Order shipped but not yet delivered
+  DELIVERED // Order successfully delivered
+  CANCELLED // Cancelled by user or admin
+  RETURN_REQUESTED // Customer initiated a return 
+  RETURNED // Return completed
+  REFUNDED // Refund issued
+  FAILED // Refund issued
 }
 
 enum WidgetType {

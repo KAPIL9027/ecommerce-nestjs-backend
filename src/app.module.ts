@@ -13,11 +13,13 @@ import { DiscountsModule } from './discounts/discounts.module';
 import { ReviewModule } from './review/review.module';
 import { ImageModule } from './image/image.module';
 import { CategoryModule } from './category/category.module';
+import { BannerModule } from './banner/banner.module';
+import { OrderModule } from './order/order.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true
-  }),HomepageModule, PrismaModule, UserModule, PlpModule, PdpModule, CartModule, DiscountsModule, ReviewModule, ImageModule, CategoryModule],
+  }),HomepageModule, PrismaModule, UserModule, PlpModule, PdpModule, CartModule, DiscountsModule, ReviewModule, ImageModule, CategoryModule, BannerModule, OrderModule],
   controllers: [AppController],
   providers: [AppService,PrismaService],
 })
