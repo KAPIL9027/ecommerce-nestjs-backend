@@ -1,13 +1,14 @@
-import { OrderStatus } from "@prisma/client";
-import { IsArray, IsIn, IsNumber, IsOptional, IsString } from "class-validator";
+import { OrderStatus } from '@prisma/client';
+import { IsArray, IsIn, IsNumber, ValidateNested } from 'class-validator';
+import { CreateOrderItemDto } from './create-order-item.dto';
+import { Type } from 'class-transformer';
 
-export class CreateOrderDto{
-    @IsString()
-    userId: string
-    @IsArray()
-    itemsIds: string[]
-    @IsNumber()
-    total: number
-    @IsIn(Object.values(OrderStatus))
-    status: OrderStatus
+export class CreateOrderDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateOrderItemDto)
+  items: CreateOrderItemDto[];
+
+  @IsIn(Object.values(OrderStatus))
+  status: OrderStatus;
 }
