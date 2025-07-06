@@ -1,6 +1,7 @@
 import {
   Injectable,
   InternalServerErrorException,
+  NotAcceptableException,
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
@@ -10,6 +11,7 @@ import { Prisma } from '@prisma/client';
 import { CreateProductOptionValueDto } from './create-product-option-value.dto';
 import { CreateProductVariantOptionDto } from './create-product-variant-option.dto';
 import { CreateProductVariantDto } from './create-product-variant.dto';
+import { HSN_GST_RATES } from 'src/utils/hsn-get-rates';
 
 @Injectable()
 export class PdpService {
@@ -43,21 +45,34 @@ export class PdpService {
     if (!product) throw new NotFoundException('Product not found');
     return product;
   }
-
+  
+  getGstRate(hsnCode:string): number{
+    if(HSN_GST_RATES[hsnCode])
+      return HSN_GST_RATES[hsnCode].gstRate;
+    return 0.0;
+  }
+  
+  // TO BE TESTED
   async createProduct(productData: CreateProductDto) {
     try {
+      let gstRate = this.getGstRate(productData.hsnCode);
+      if(gstRate === 0.0){
+        throw new NotAcceptableException('Invalid Hsncode Provided!');
+      }
       let productDataObj = {
         brand: productData.brand,
         title: productData.title,
         description: productData.description,
         price: productData.price,
+        hsnCode: productData.hsnCode,
+        gstRate,
         productInformation: productData.productInformation,
         categoryId: productData.categoryId,
       };
-      if(productData.productImageIds){
+      if (productData.productImageIds) {
         productDataObj['productImages'] = {
-          connect: productData.productImageIds.map((id)=>({id}))
-        }
+          connect: productData.productImageIds.map((id) => ({ id })),
+        };
       }
       if (productData.variantIds) {
         productDataObj['variants'] = {
@@ -101,20 +116,20 @@ export class PdpService {
   async createProductOption(productOptionData: CreateProductOptionDto) {
     try {
       let productOptionObj = {
-         name: productOptionData.name,
-          product: {
-            connect: {
-              id: productOptionData.productId,
-            },
+        name: productOptionData.name,
+        product: {
+          connect: {
+            id: productOptionData.productId,
           },
-      }
-      if(productOptionData.valuesIds){
-        productOptionObj["values"] = {
-          connect: productOptionData.valuesIds.map((id)=>({id}))
-        }
+        },
+      };
+      if (productOptionData.valuesIds) {
+        productOptionObj['values'] = {
+          connect: productOptionData.valuesIds.map((id) => ({ id })),
+        };
       }
       const productOption = await this.prismaService.productOption.create({
-        data: productOptionObj
+        data: productOptionObj,
       });
       return {
         message: 'Succesfully Created the ProductOption',
@@ -207,8 +222,10 @@ export class PdpService {
         stock: productVariantData.stock,
       };
 
-      if(productVariantData.optionsIds) {
-        productVariantObj['options'] = {connect: productVariantData.optionsIds.map((id)=> ({id}))} 
+      if (productVariantData.optionsIds) {
+        productVariantObj['options'] = {
+          connect: productVariantData.optionsIds.map((id) => ({ id })),
+        };
       }
       if (productVariantData.cartItemsIds) {
         productVariantObj['cartItems'] = {
@@ -221,7 +238,9 @@ export class PdpService {
         };
       }
       if (productVariantData.imagesIds) {
-        productVariantObj['images'] = productVariantData.imagesIds.map((id)=>({id}));
+        productVariantObj['images'] = productVariantData.imagesIds.map(
+          (id) => ({ id }),
+        );
       }
       const productVariant = await this.prismaService.productVariant.create({
         data: productVariantObj,

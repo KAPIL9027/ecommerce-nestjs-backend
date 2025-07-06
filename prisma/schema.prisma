@@ -19,6 +19,8 @@ model Product {
   title              String
   description        String
   price              Float
+  gstRate            Float
+  hsnCode            String
   productImages      Image[]
   productInformation String
   isNew              Boolean          @default(false)
@@ -122,11 +124,19 @@ enum UserRole {
 }
 
 model Cart {
-  id        String     @id @default(uuid())
-  userId    String     @unique
-  user      User       @relation(fields: [userId], references: [id])
-  items     CartItem[]
-  updatedAt DateTime   @updatedAt
+  id             String     @id @default(uuid())
+  userId         String     @unique
+  user           User       @relation(fields: [userId], references: [id])
+  items          CartItem[]
+  totalDiscounts Decimal    @db.Decimal(20, 2)
+  totalCgst      Decimal    @db.Decimal(20, 2)   
+  totalSgst      Decimal    @db.Decimal(20, 2)
+  totalIgst      Decimal    @db.Decimal(20, 2)
+  totalTaxes     Decimal    @db.Decimal(20, 2) // cgst + sgst or igst
+  subTotal       Decimal    @db.Decimal(20, 2) // (totalPrice + totalTaxes) - totalDiscounts
+  shippingAddressId String  @unique
+  shippingAddress ShippingAddress @relation(fields:[shippingAddressId],references: [id])
+  updatedAt      DateTime   @updatedAt
 }
 
 model CartItem {
@@ -245,7 +255,7 @@ model Order {
   payment   Payment?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
-  deletedAt DateTime?   // Soft delete
+  deletedAt DateTime? // Soft delete
 }
 
 model OrderItem {
@@ -270,6 +280,7 @@ model Payment {
 
 model ShippingAddress {
   id         String  @id @default(uuid())
+  cart     Cart?
   userId     String
   user       User    @relation(fields: [userId], references: [id])
   fullName   String

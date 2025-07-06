@@ -4,7 +4,14 @@ import {
   NotAcceptableException,
   NotFoundException,
 } from '@nestjs/common';
-import { Cart, Prisma } from '@prisma/client';
+import {
+  Cart,
+  Discount,
+  DiscountCode,
+  Prisma,
+  ProductVariant,
+} from '@prisma/client';
+import { CartItem } from './cart-item.dto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCartDto } from './create-cart.dto';
 import { Request } from 'express';
@@ -38,6 +45,118 @@ export class CartService {
     return cart;
   }
 
+  filterData(discountCodes: DiscountCode[], cartValue?: number) {
+    return discountCodes.filter((discountCode) => {
+      
+          if(!discountCode.active) return false;
+          if(discountCode.expiresAt && discountCode.expiresAt <= new Date()) return false;
+          if(discountCode.minCartValue && cartValue && cartValue < discountCode.minCartValue)
+          return false;
+          if(discountCode.maxUses && discountCode.maxUses <= discountCode.usedCount)
+          return false;
+     
+          return true;
+      });
+  }
+
+  async getDiscountsTotal(userId: string, productVariantsItems: CartItem[]) {
+    let totalDiscount = 0.0;
+    const productVariants = await Promise.all(
+      productVariantsItems.map(async (productVariantItem: CartItem) => {
+        const variant = await this.prismaService.productVariant.findFirst({
+          where: { id: productVariantItem.variantId },
+          include: {
+            discounts: true,
+            product: {
+              include: {
+                discounts: true,
+                category: {
+                  include: {
+                    discounts: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!variant || !variant.price) {
+          throw new Error(
+            `Variant not found or price missing for ID: ${productVariantItem.variantId}`,
+          );
+        }
+
+        return {
+          qty: productVariantItem.quantity,
+          price: variant?.price,
+          variant,
+        };
+      }),
+    );
+    let cartValue = productVariants.reduce((accumulator, productVariant) => {
+      return accumulator + productVariant.price * productVariant.qty;
+    }, 0);
+
+    const discountCodesData = (
+      await this.prismaService.user.findUnique({
+        where: {
+          id: userId,
+        },
+        include: {
+          discountCode: {
+            include: {
+              discount: true,
+            },
+          },
+        },
+      })
+    );
+    const discountCodes = discountCodesData?.discountCode ?? []
+   
+      let validDiscountsCodes = this.filterData(discountCodes,cartValue);
+
+      totalDiscount += validDiscountsCodes.reduce((accumulator, discountCode) => {
+        let amount = 0;
+        let discount = discountCode.discount;
+        if (discount.active) {
+          if (discount.type === 'PERCENTAGE') {
+            amount += cartValue * (discount.amount / 100);
+          } else {
+            amount += discount.amount;
+          }
+        }
+        return accumulator + amount;
+      }, 0);
+    }
+
+    let variants = productVariants.map((productVariant) => {
+      let productLevelDiscounts = productVariant.variant!.product.discounts;
+      let categoryLevelDiscounts =
+        productVariant.variant!.product.category.discounts;
+      let discounts = [...productLevelDiscounts, ...categoryLevelDiscounts];
+      return {
+        discountValue: discounts.reduce((accumulator, discount) => {
+          let amount = 0;
+          if (discount.active) {
+            if (discount.type === 'PERCENTAGE') {
+              amount +=
+                productVariant.price! *
+                productVariant.qty *
+                (discount.amount / 100);
+            } else {
+              amount += discount.amount;
+            }
+          }
+          return accumulator + amount;
+        }, 0),
+      };
+    });
+
+    totalDiscount += variants.reduce((accumulator, variant) => {
+      return accumulator + variant.discountValue;
+    }, 0);
+    return totalDiscount;
+  }
   async createCart(cartData: CreateCartDto, req: Request) {
     try {
       await this.prismaService.cart.create({
@@ -160,8 +279,8 @@ export class CartService {
         },
       });
       return {
-        message: "Successfully Deleted the Cart!"
-      }
+        message: 'Successfully Deleted the Cart!',
+      };
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
@@ -176,3 +295,17 @@ export class CartService {
     }
   }
 }
+
+type FullVariant = {
+  qty: number;
+  variant: {
+    id: string;
+    discounts: Discount[];
+    product: {
+      discounts: Discount[];
+      category: {
+        discounts: Discount[];
+      };
+    };
+  };
+};

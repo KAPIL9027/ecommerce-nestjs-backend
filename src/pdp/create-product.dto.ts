@@ -24,6 +24,9 @@ export class CreateProductDto {
   @IsNumber()
   price: number;
 
+  @IsString()
+  hsnCode: string;
+
   @IsArray()
   @IsUUID('4', { each: true })
   @IsOptional()
