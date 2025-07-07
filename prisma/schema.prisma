@@ -19,8 +19,8 @@ model Product {
   title              String
   description        String
   price              Float
-  gstRate            Float
-  hsnCode            String
+  gstRate            Float   @default(0.0)
+  hsnCode            String @default("")
   productImages      Image[]
   productInformation String
   isNew              Boolean          @default(false)
@@ -124,19 +124,19 @@ enum UserRole {
 }
 
 model Cart {
-  id             String     @id @default(uuid())
-  userId         String     @unique
-  user           User       @relation(fields: [userId], references: [id])
-  items          CartItem[]
-  totalDiscounts Decimal    @db.Decimal(20, 2)
-  totalCgst      Decimal    @db.Decimal(20, 2)   
-  totalSgst      Decimal    @db.Decimal(20, 2)
-  totalIgst      Decimal    @db.Decimal(20, 2)
-  totalTaxes     Decimal    @db.Decimal(20, 2) // cgst + sgst or igst
-  subTotal       Decimal    @db.Decimal(20, 2) // (totalPrice + totalTaxes) - totalDiscounts
-  shippingAddressId String  @unique
-  shippingAddress ShippingAddress @relation(fields:[shippingAddressId],references: [id])
-  updatedAt      DateTime   @updatedAt
+  id                String          @id @default(uuid())
+  userId            String          @unique
+  user              User            @relation(fields: [userId], references: [id])
+  items             CartItem[]      @relation("CartToCartItem")
+  totalDiscounts    Decimal         @default(0) @db.Decimal(20, 2)
+  totalCgst         Decimal         @default(0) @db.Decimal(20, 2)
+  totalSgst         Decimal         @default(0) @db.Decimal(20, 2)
+  totalIgst         Decimal         @default(0) @db.Decimal(20, 2)
+  totalTaxes        Decimal         @default(0) @db.Decimal(20, 2) // cgst + sgst or igst
+  subTotal          Decimal         @default(0) @db.Decimal(20, 2) // (totalPrice + totalTaxes) - totalDiscounts
+  shippingAddressId String   @unique
+  shippingAddress   ShippingAddress @relation(fields: [shippingAddressId], references: [id])
+  updatedAt         DateTime        @updatedAt
 }
 
 model CartItem {
@@ -144,7 +144,7 @@ model CartItem {
   variantId String
   variant   ProductVariant @relation(fields: [variantId], references: [id])
   cartId    String
-  cart      Cart           @relation(fields: [cartId], references: [id])
+  cart      Cart           @relation("CartToCartItem", fields: [cartId], references: [id], onDelete: Cascade)
   quantity  Int
 
   @@unique([cartId, variantId])
@@ -280,9 +280,9 @@ model Payment {
 
 model ShippingAddress {
   id         String  @id @default(uuid())
-  cart     Cart?
   userId     String
   user       User    @relation(fields: [userId], references: [id])
+  cart       Cart?
   fullName   String
   address1   String
   address2   String?
