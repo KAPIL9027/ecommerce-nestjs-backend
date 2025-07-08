@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Injectable,
   InternalServerErrorException,
   NotAcceptableException,
@@ -49,7 +50,25 @@ export class CartService {
     if (!cart) throw new NotFoundException('No Cart Found!');
     return cart;
   }
-  
+  async getTaxes(productVariantItems: CartItem[]){
+    const productVariants = await Promise.all(productVariantItems.map(async (productVariantItem)=>{
+      const product = (await this.prismaService.productVariant.findUnique({
+          where: {id: productVariantItem.variantId},
+          include: {
+            product: true
+          }
+        }))?.product;
+
+      return {
+        qty: productVariantItem.quantity,
+        productTax: (product?.price)! * (product?.gstRate)!
+      }
+    }));
+
+    return productVariants.reduce((accumulator,productVariantItem)=>{
+      return accumulator + (productVariantItem.qty * productVariantItem.productTax)
+    },0)
+  }
   async createCart(cartData: CreateCartDto, req: Request) {
     
       const shippingAddress =
@@ -59,12 +78,25 @@ export class CartService {
             isDefault: true,
           },
         });
+      if(!cartData.items || cartData.items.length === 0){
+        throw new BadRequestException('Cart items are required');
+      }
       if (!shippingAddress)
         throw new NotFoundException(
           'No Default Shipping Address Found for the User',
         );
-      const totalDiscount = this.discountService.getDiscountsTotal(req.user!.userId,cartData.items);
-
+      const totalDiscount = await this.discountService.getDiscountsTotal(req.user!.userId,cartData.items);
+      const totalTaxes = await this.getTaxes(cartData.items);
+      let totalCgst: number = 0.0;
+      let totalSgst: number = 0.0;
+      let totalIgst: number = 0.0;
+      if(shippingAddress.state === process.env.BUSINESS_STATE){
+        totalCgst = totalTaxes / 2;
+        totalSgst = totalTaxes / 2;
+      }
+      else{
+        totalIgst = totalTaxes;
+      }     
       await this.prismaService.cart.create({
         data: {
           user: { connect: { id: req.user!.userId } },
@@ -76,6 +108,11 @@ export class CartService {
               id: shippingAddress.id,
             },
           },
+          totalDiscounts: totalDiscount,
+          totalTaxes,
+          totalCgst,
+          totalIgst,
+          totalSgst
         },
       });
 

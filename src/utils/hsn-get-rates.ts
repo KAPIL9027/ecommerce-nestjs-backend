@@ -5,6 +5,7 @@ export const HSN_GST_RATES = {
   "6401": { description: "Footwear with rubber soles", gstRate: 0.05 },
   "8504": { description: "Chargers, power supplies", gstRate: 0.18 },
   "8517": { description: "Mobile phones", gstRate: 0.18 },
+  "8518": {description: "Airpods, headphones etc.", gstRate: 0.18},
   "8528": { description: "Monitors and projectors", gstRate: 0.18 },
   "8471": { description: "Laptops, desktops", gstRate: 0.18 },
   "9503": { description: "Toys and games", gstRate: 0.12 },
