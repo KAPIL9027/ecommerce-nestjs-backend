@@ -16,11 +16,12 @@ import { CategoryModule } from './category/category.module';
 import { BannerModule } from './banner/banner.module';
 import { OrderModule } from './order/order.module';
 import { PaymentModule } from './payment/payment.module';
+import { ShippingAddressModule } from './shipping-address/shipping-address.module';
 
 @Module({
   imports: [ConfigModule.forRoot({
     isGlobal: true
-  }),HomepageModule, PrismaModule, UserModule, PlpModule, PdpModule, CartModule, DiscountsModule, ReviewModule, ImageModule, CategoryModule, BannerModule, OrderModule, PaymentModule],
+  }),HomepageModule, PrismaModule, UserModule, PlpModule, PdpModule, CartModule, DiscountsModule, ReviewModule, ImageModule, CategoryModule, BannerModule, OrderModule, PaymentModule, ShippingAddressModule],
   controllers: [AppController],
   providers: [AppService,PrismaService],
 })

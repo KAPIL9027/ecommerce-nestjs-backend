@@ -52,16 +52,16 @@ export class CartService {
   }
   async getTaxes(productVariantItems: CartItem[]){
     const productVariants = await Promise.all(productVariantItems.map(async (productVariantItem)=>{
-      const product = (await this.prismaService.productVariant.findUnique({
+      const productVariant = (await this.prismaService.productVariant.findUnique({
           where: {id: productVariantItem.variantId},
           include: {
             product: true
           }
-        }))?.product;
+        }));
 
       return {
         qty: productVariantItem.quantity,
-        productTax: (product?.price)! * (product?.gstRate)!
+        productTax: (productVariant?.price)! * (productVariant?.product?.gstRate)!
       }
     }));
 
