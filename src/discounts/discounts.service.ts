@@ -3,8 +3,8 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import {Prisma } from '@prisma/client';
-import {CartItem} from '../cart/cart-item.dto'
+import { Prisma } from '@prisma/client';
+import { CartItem } from '../cart/cart-item.dto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateDiscountDto } from './create-discount.dto';
 import { CreateDiscountCodeDto } from './create-discountcode.dto';
@@ -35,7 +35,10 @@ export class DiscountsService {
       return true;
     });
   }
-  async getDiscountsTotal(userId: string, productVariantsItems: CartItem[]) {
+  async getCartAndDiscountsTotal(
+    userId: string,
+    productVariantsItems: CartItem[],
+  ) {
     let totalDiscount = 0.0;
     const productVariants = await Promise.all(
       productVariantsItems.map(async (productVariantItem: CartItem) => {
@@ -103,6 +106,24 @@ export class DiscountsService {
     }, 0);
     let variants = productVariants.map((productVariant) => {
       let productLevelDiscounts = productVariant.variant!.product.discounts;
+      let productVariantLevelDiscounts = productVariant.variant!.discounts;
+      if (productLevelDiscounts.length > 0) {
+        let validVariantLevelDiscounts = productVariantLevelDiscounts.filter(
+          (productVariantLevelDiscount) => {
+            return productVariantLevelDiscount.combinable;
+          },
+        );
+        productLevelDiscounts =
+          validVariantLevelDiscounts.length > 0
+            ? [...productLevelDiscounts, ...validVariantLevelDiscounts]
+            : productLevelDiscounts;
+      } else {
+        productLevelDiscounts =
+          productVariantLevelDiscounts.length > 0
+            ? [...productVariantLevelDiscounts]
+            : productLevelDiscounts;
+      }
+
       let categoryLevelDiscounts =
         productVariant.variant!.product.category.discounts;
       let discounts = [...productLevelDiscounts, ...categoryLevelDiscounts];
@@ -127,7 +148,7 @@ export class DiscountsService {
     totalDiscount += variants.reduce((accumulator, variant) => {
       return accumulator + variant.discountValue;
     }, 0);
-    return totalDiscount;
+    return [cartValue, totalDiscount];
   }
 
   async getDiscount(discountId: string) {
