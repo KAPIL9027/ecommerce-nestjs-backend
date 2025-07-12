@@ -19,8 +19,8 @@ model Product {
   title              String
   description        String
   price              Float
-  gstRate            Float   @default(0.0)
-  hsnCode            String @default("")
+  gstRate            Float            @default(0.0)
+  hsnCode            String           @default("")
   productImages      Image[]
   productInformation String
   isNew              Boolean          @default(false)
@@ -134,7 +134,7 @@ model Cart {
   totalIgst         Decimal         @default(0) @db.Decimal(20, 2)
   totalTaxes        Decimal         @default(0) @db.Decimal(20, 2) // cgst + sgst or igst
   subTotal          Decimal         @default(0) @db.Decimal(20, 2) // (totalPrice + totalTaxes) - totalDiscounts
-  shippingAddressId String   @unique
+  shippingAddressId String          @unique
   shippingAddress   ShippingAddress @relation(fields: [shippingAddressId], references: [id])
   updatedAt         DateTime        @updatedAt
 }
@@ -246,26 +246,32 @@ model WidgetItem {
 }
 
 model Order {
-  id        String      @id @default(uuid())
-  userId    String
-  user      User        @relation(fields: [userId], references: [id])
-  items     OrderItem[]
-  total     Float
-  status    OrderStatus
-  payment   Payment?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
-  deletedAt DateTime? // Soft delete
+  id                String          @id @default(uuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  totalDiscounts    Decimal         @default(0) @db.Decimal(20, 2)
+  totalCgst         Decimal         @default(0) @db.Decimal(20, 2)
+  totalSgst         Decimal         @default(0) @db.Decimal(20, 2)
+  totalIgst         Decimal         @default(0) @db.Decimal(20, 2)
+  totalTaxes        Decimal         @default(0) @db.Decimal(20, 2) // cgst + sgst or igst
+  subTotal          Decimal         @default(0) @db.Decimal(20, 2) // (totalPrice + totalTaxes) - totalDiscounts
+  status            OrderStatus     @default(PENDING)
+  payment           Payment?
+  shippingAddressId String          @unique
+  shippingAddress   ShippingAddress @relation(fields: [shippingAddressId], references: [id])
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  deletedAt         DateTime? // Soft delete
 }
 
 model OrderItem {
   id        String         @id @default(uuid())
   orderId   String
-  order     Order          @relation(fields: [orderId], references: [id])
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variantId String
   variant   ProductVariant @relation(fields: [variantId], references: [id])
   quantity  Int
-  price     Float
 }
 
 model Payment {
@@ -283,6 +289,7 @@ model ShippingAddress {
   userId     String
   user       User    @relation(fields: [userId], references: [id])
   cart       Cart?
+  order      Order?
   fullName   String
   address1   String
   address2   String?
@@ -298,6 +305,11 @@ enum PaymentStatus {
   PENDING
   PAID
   CANCELLED
+}
+
+enum PaymentProvider {
+  RAZORPAY
+  COD
 }
 
 enum OrderStatus {

@@ -3,7 +3,7 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { OrderItem, Prisma } from '@prisma/client';
 import { CartItem } from '../cart/cart-item.dto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateDiscountDto } from './create-discount.dto';
@@ -37,11 +37,11 @@ export class DiscountsService {
   }
   async getCartAndDiscountsTotal(
     userId: string,
-    productVariantsItems: CartItem[],
+    productVariantsItems: CartItem[] | OrderItem[],
   ) {
     let totalDiscount = 0.0;
     const productVariants = await Promise.all(
-      productVariantsItems.map(async (productVariantItem: CartItem) => {
+      productVariantsItems.map(async (productVariantItem: CartItem | OrderItem) => {
         const variant = await this.prismaService.productVariant.findFirst({
           where: { id: productVariantItem.variantId },
           include: {

@@ -1,108 +1,143 @@
-import { Injectable, InternalServerErrorException, NotAcceptableException, NotFoundException } from '@nestjs/common';
-import { CreateOrderDto } from './create-order.dto';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotAcceptableException,
+  NotFoundException,
+} from '@nestjs/common';
+
 import { PrismaService } from 'src/prisma.service';
 import { Request } from 'express';
 import { UpdateOrderDto } from './update-order.dto';
+import { DiscountsService } from 'src/discounts/discounts.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrderService {
-  constructor(private prismaService: PrismaService) {}
-
-  async createOrder(createOrderBody: CreateOrderDto, req: Request) {
+  constructor(
+    private prismaService: PrismaService,
+    private discountsService: DiscountsService,
+  ) {}
+  
+  async checkout(req: Request) {
     try {
-      let total = createOrderBody.items.reduce((accumulator,currentOrderItem)=> accumulator + currentOrderItem.price*currentOrderItem.quantity,0);
-      let orderDataObj = {
-        user: {
-          connect: {
-            id: req.user!.userId,
-          },
+      const cart = await this.prismaService.cart.findUnique({
+        where: {
+          userId: req.user!.userId,
         },
-        total,
-        status: createOrderBody.status,
-        items: {
-          create: createOrderBody.items
+        include: {
+          items: true,
         },
-      };
+      });
 
-      const order = await this.prismaService.order.create({
-        data: orderDataObj,
+      if (!cart) throw new NotFoundException('No Cart Found!');
+
+      await this.prismaService.order.create({
+        data: {
+          userId: req.user!.userId,
+          items: {
+            create: cart.items.map((item) => {
+              return {
+                variantId: item.variantId,
+                quantity: item.quantity,
+              };
+            }),
+          },
+          shippingAddressId: cart.shippingAddressId,
+          totalTaxes: cart.totalTaxes,
+          totalDiscounts: cart.totalDiscounts,
+          totalSgst: cart.totalSgst,
+          totalCgst: cart.totalCgst,
+          totalIgst: cart.totalIgst,
+          subTotal: cart.subTotal,
+        },
       });
       return {
-        message: 'Successfully placed the Order!',
-        createdOrder: order,
+        message: 'Successfully Placed a Order',
       };
+
     } catch (e) {
-      throw e;
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw e;
+      }
+      throw new InternalServerErrorException('Internal Server Error!');
     }
   }
 
-  async getAllOrders(req: Request){
-    try{
+  async getAllOrders(req: Request) {
+    try {
       const orders = await this.prismaService.order.findMany({
         where: {
           userId: req.user!.userId,
-          deletedAt: null
-        }
+          deletedAt: null,
+        },
       });
       return {
-        message: "Successfully Fetched All the Valid Orders.",
-        orders
+        message: 'Successfully Fetched All the Valid Orders.',
+        orders,
+      };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw new NotFoundException('No User Found with the provided ID!');
       }
-    }
-    catch(e){
-      if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025'){
-        throw new NotFoundException('No User Found with the provided ID!')
-      }
-      throw new InternalServerErrorException('OOPS, Something Went Wrong!')
+      throw new InternalServerErrorException('OOPS, Something Went Wrong!');
     }
   }
   async updateOrder(orderId: string, updateOrderBody: UpdateOrderDto) {
-    try{
+    try {
       const updatedOrder = await this.prismaService.order.update({
         where: {
-          id: orderId
+          id: orderId,
         },
         data: {
-          status: updateOrderBody.status
-        }
+          status: updateOrderBody.status,
+        },
       });
 
       return {
-        message: "Successfully Updated the Order!",
-        updatedOrder
-      }
-    }
-    catch(e){
+        message: 'Successfully Updated the Order!',
+        updatedOrder,
+      };
+    } catch (e) {
       console.error(e);
-      if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025'){
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
         throw new NotFoundException('No Order with this Id Found!');
       }
-      throw new InternalServerErrorException('OOPS, Something Went Wrong!')
+      throw new InternalServerErrorException('OOPS, Something Went Wrong!');
     }
   }
 
-  async deleteOrder(orderId: string){
-    try{
+  async deleteOrder(orderId: string) {
+    try {
       const deletedOrder = await this.prismaService.order.update({
         where: {
-          id: orderId
+          id: orderId,
         },
         data: {
-          deletedAt: new Date()
-        }
+          deletedAt: new Date(),
+        },
       });
 
       return {
-        message: "Successfully Deleted the Order!",
-        order: deletedOrder
+        message: 'Successfully Deleted the Order!',
+        order: deletedOrder,
+      };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw new NotFoundException('No Order Found with the given ID!');
       }
-    } 
-    catch(e){
-      if(e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2025'){
-        throw new NotFoundException('No Order Found with the given ID!')
-      }
-        throw new InternalServerErrorException('OOPS, Something Went Wrong!');
+      throw new InternalServerErrorException('OOPS, Something Went Wrong!');
     }
   }
 }
