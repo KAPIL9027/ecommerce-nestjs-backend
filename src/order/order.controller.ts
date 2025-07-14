@@ -19,7 +19,6 @@ import { UpdateOrderDto } from './update-order.dto';
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 
-  // to be tested
   @Post('/checkout')
   @UseGuards(JWTCookieGuard)
   async checkout(@Req() req: Request) {

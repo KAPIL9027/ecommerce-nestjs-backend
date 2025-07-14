@@ -275,13 +275,20 @@ model OrderItem {
 }
 
 model Payment {
-  id        String        @id @default(uuid())
-  orderId   String        @unique
-  order     Order         @relation(fields: [orderId], references: [id])
-  provider  String
-  status    PaymentStatus
-  amount    Float
-  createdAt DateTime      @default(now())
+  id       String        @id @default(uuid())
+  orderId  String        @unique
+  order    Order         @relation(fields: [orderId], references: [id])
+  provider String
+  status   PaymentStatus
+  amount   Decimal       @db.Decimal(20, 2)
+
+  razorpayOrderId   String? // Razorpay's order ID
+  razorpayPaymentId String? // Razorpay's payment ID
+  razorpaySignature String? // Signature returned from frontend
+
+  errorCode    String? // error code received from razorpay
+  errorMessage String? // error message received from razorpay
+  createdAt    DateTime @default(now())
 }
 
 model ShippingAddress {
