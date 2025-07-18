@@ -8,6 +8,7 @@ import { CreateProductOptionDto } from './create-product-option.dto';
 import { CreateProductOptionValueDto } from './create-product-option-value.dto';
 import { CreateProductVariantOptionDto } from './create-product-variant-option.dto';
 import { CreateProductVariantDto } from './create-product-variant.dto';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('pdp')
 export class PdpController {
@@ -18,14 +19,13 @@ export class PdpController {
     return this.pdpService.getPdp(productId);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 10 } })
   @Post('/create-product')
   @UseGuards(JWTCookieGuard, RolesGuard)
   @Roles('ADMIN')
   async createProduct(@Body() reqBody: CreateProductDto) {
     return this.pdpService.createProduct(reqBody);
   }
-
-  // to be tested
 
   @Post('/create-product-option')
   @UseGuards(JWTCookieGuard, RolesGuard)
@@ -46,7 +46,7 @@ export class PdpController {
   // to be tested
 
   @Post('/create-product-variant-option')
-  @UseGuards(JWTCookieGuard,RolesGuard)
+  @UseGuards(JWTCookieGuard, RolesGuard)
   @Roles('ADMIN')
   async createProductVariantOption(
     @Body() reqBody: CreateProductVariantOptionDto,
@@ -54,14 +54,11 @@ export class PdpController {
     return this.pdpService.createProductVariantOption(reqBody);
   }
 
+  @Throttle({ default: { ttl: 60000, limit: 15 } })
   @Post('/create-product-variant')
-  @UseGuards(JWTCookieGuard,RolesGuard)
+  @UseGuards(JWTCookieGuard, RolesGuard)
   @Roles('ADMIN')
-  async createProductVariant(
-    @Body() reqBody: CreateProductVariantDto
-  ){
+  async createProductVariant(@Body() reqBody: CreateProductVariantDto) {
     return this.pdpService.createProductVariant(reqBody);
   }
-
-  
 }

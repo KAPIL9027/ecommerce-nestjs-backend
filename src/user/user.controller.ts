@@ -14,10 +14,14 @@ import { CreateUserDto } from './create-user.dto';
 import { Response } from 'express';
 import { ValidateUserDto } from './validate-user.dto';
 import { JWTCookieGuard } from './valid-user.guard';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
+
+
+  @Throttle({default:{ttl:60000,limit: 5}})
   @Post('signin')
   @HttpCode(200)
   async validateUser(
@@ -40,6 +44,8 @@ export class UserController {
       throw new InternalServerErrorException('500, Internal Server Error!');
     }
   }
+
+  @Throttle({default:{ttl:60000,limit: 5}})
   @Post('signup')
   async createUser(
     @Body() dto: CreateUserDto,
@@ -57,11 +63,13 @@ export class UserController {
     };
   }
 
+  @Throttle({default:{ttl:60000,limit: 30}})
   @Get('profile')
   @UseGuards(JWTCookieGuard)
   async getUserProfile(@Query('email') email: string) {
     return this.userService.getUserProfile(email);
   }
+
 
   @Get('logout')
   @UseGuards(JWTCookieGuard)

@@ -30,7 +30,7 @@ import { CustomThrottlerGuard } from './custom-throttler.guard';
       throttlers: [
         {
           ttl: 60000,
-          limit: 10,
+          limit: 100,
         },
       ],
     }),

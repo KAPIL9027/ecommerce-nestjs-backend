@@ -10,6 +10,7 @@ import { Request } from 'express';
 import { UpdateOrderDto } from './update-order.dto';
 import { DiscountsService } from 'src/discounts/discounts.service';
 import { Prisma } from '@prisma/client';
+import { Throttle } from '@nestjs/throttler';
 
 @Injectable()
 export class OrderService {
@@ -17,7 +18,7 @@ export class OrderService {
     private prismaService: PrismaService,
     private discountsService: DiscountsService,
   ) {}
-  
+
   async checkout(req: Request) {
     try {
       const cart = await this.prismaService.cart.findUnique({
@@ -54,7 +55,6 @@ export class OrderService {
       return {
         message: 'Successfully Placed a Order',
       };
-
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
