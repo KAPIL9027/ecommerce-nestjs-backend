@@ -6,36 +6,44 @@ import {
   InternalServerErrorException,
   Post,
   Query,
+  Req,
   Res,
   UseGuards,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './create-user.dto';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { ValidateUserDto } from './validate-user.dto';
 import { JWTCookieGuard } from './valid-user.guard';
 import { Throttle } from '@nestjs/throttler';
+import { generateToken } from 'src/main';
 
 @Controller('user')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-
-  @Throttle({default:{ttl:60000,limit: 5}})
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('signin')
   @HttpCode(200)
   async validateUser(
     @Body() validateUserDto: ValidateUserDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
       const token = await this.userService.validateUser(validateUserDto);
-      res.cookie('token', token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: true,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      });
+      const csrfToken = generateToken(req, res);
+      res
+        .cookie('token', token, {
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: true,
+          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        })
+        .json({
+          'csrf-token': csrfToken,
+        });
+
       return {
         message: 'You are logged in!',
       };
@@ -45,7 +53,7 @@ export class UserController {
     }
   }
 
-  @Throttle({default:{ttl:60000,limit: 5}})
+  @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('signup')
   async createUser(
     @Body() dto: CreateUserDto,
@@ -63,13 +71,12 @@ export class UserController {
     };
   }
 
-  @Throttle({default:{ttl:60000,limit: 30}})
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Get('profile')
   @UseGuards(JWTCookieGuard)
   async getUserProfile(@Query('email') email: string) {
     return this.userService.getUserProfile(email);
   }
-
 
   @Get('logout')
   @UseGuards(JWTCookieGuard)
