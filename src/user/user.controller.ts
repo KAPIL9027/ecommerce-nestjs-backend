@@ -16,7 +16,6 @@ import { Request, Response } from 'express';
 import { ValidateUserDto } from './validate-user.dto';
 import { JWTCookieGuard } from './valid-user.guard';
 import { Throttle } from '@nestjs/throttler';
-import { generateToken } from 'src/main';
 
 @Controller('user')
 export class UserController {
@@ -32,20 +31,18 @@ export class UserController {
   ) {
     try {
       const token = await this.userService.validateUser(validateUserDto);
-      const csrfToken = generateToken(req, res);
-      res
-        .cookie('token', token, {
-          httpOnly: true,
-          sameSite: 'lax',
-          secure: true,
-          maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        })
-        .json({
-          'csrf-token': csrfToken,
-        });
+      const csrfToken = (req as any).csrfToken();
+      res.cookie('XSRF-TOKEN',csrfToken);
+      res.cookie('token', token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      });
 
       return {
         message: 'You are logged in!',
+        csrfToken
       };
     } catch (e) {
       console.error(e);
