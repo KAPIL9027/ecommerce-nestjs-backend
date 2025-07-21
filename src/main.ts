@@ -1,13 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { csrfMiddleware } from './csrf.middleware';
 
-
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+  });
+
+  app.useLogger(app.get(Logger));
   app.enableCors({
     crendentials: true,
   });
@@ -19,7 +23,8 @@ async function bootstrap() {
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
-function csurf(arg0: { cookie: { httpOnly: boolean; sameSite: string; secure: boolean; }; }): any {
+function csurf(arg0: {
+  cookie: { httpOnly: boolean; sameSite: string; secure: boolean };
+}): any {
   throw new Error('Function not implemented.');
 }
-

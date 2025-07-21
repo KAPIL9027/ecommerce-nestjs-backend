@@ -20,9 +20,27 @@ import { ShippingAddressModule } from './shipping-address/shipping-address.modul
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './custom-throttler.guard';
+import { LoggerModule } from 'nestjs-pino';
 
+const isProd = process.env.NODE_ENV === 'production' ? true : false;
 @Module({
   imports: [
+    LoggerModule.forRoot({
+      pinoHttp: {
+        transport: !isProd
+          ? {
+              target: 'pino-pretty',
+              options: {
+                colorize: true,
+                translatedTime: 'yyyy-mm-dd HH:MM:ss.l',
+                ignore: 'pid,hostname',
+              },
+            }
+          : undefined,
+        autoLogging: true,
+        level: isProd ? 'info' : 'debug',
+      },
+    }),
     ConfigModule.forRoot({
       isGlobal: true,
     }),
