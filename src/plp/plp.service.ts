@@ -1,10 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { PlpDto } from './getPlp.dto';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class PlpService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private readonly logger: PinoLogger,
+  ) {
+    logger.setContext(PlpService.name);
+  }
   getWhereData(category: string, reqData: PlpDto) {
     let obj = {
       categoryId: category,
@@ -18,20 +24,27 @@ export class PlpService {
     return obj;
   }
   async getPlpData(category: string, reqData: PlpDto) {
-    let orderBy: any = {};
-    if (reqData.sortBy) orderBy[reqData.sortBy] = reqData?.sortOrder ?? 'asc';
-    const page = reqData?.page ?? 1;
-    const pageSize = reqData?.pageSize ?? 10;
-    const products = await this.prismaService.product.findMany({
-      where: this.getWhereData(category, reqData),
-      include: {
-        variants: true,
-        productImages: true,
-      },
-      skip: (page - 1) * pageSize,
-      take: pageSize,
-      orderBy: orderBy,
-    });
-    return products;
+    try {
+      let orderBy: any = {};
+      if (reqData.sortBy) orderBy[reqData.sortBy] = reqData?.sortOrder ?? 'asc';
+      const page = reqData?.page ?? 1;
+      const pageSize = reqData?.pageSize ?? 10;
+      const products = await this.prismaService.product.findMany({
+        where: this.getWhereData(category, reqData),
+        include: {
+          variants: true,
+          productImages: true,
+        },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        orderBy: orderBy,
+      });
+
+      this.logger.info('Successfully Fetched the Products');
+      return { message: 'Successfully Fetched the Products', products };
+    } catch (e) {
+      this.logger.error(e, 'Get PLP Data Service Failed!');
+      throw e;
+    }
   }
 }

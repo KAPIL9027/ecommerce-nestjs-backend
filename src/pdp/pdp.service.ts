@@ -12,10 +12,16 @@ import { CreateProductOptionValueDto } from './create-product-option-value.dto';
 import { CreateProductVariantOptionDto } from './create-product-variant-option.dto';
 import { CreateProductVariantDto } from './create-product-variant.dto';
 import { HSN_GST_RATES } from 'src/utils/hsn-get-rates';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class PdpService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private readonly logger: PinoLogger,
+  ) {
+    logger.setContext(PdpService.name);
+  }
 
   async getPdp(productId: string) {
     const product = await this.prismaService.product.findUnique({
@@ -45,18 +51,17 @@ export class PdpService {
     if (!product) throw new NotFoundException('Product not found');
     return product;
   }
-  
-  getGstRate(hsnCode:string): number{
-    if(HSN_GST_RATES[hsnCode])
-      return HSN_GST_RATES[hsnCode].gstRate;
+
+  getGstRate(hsnCode: string): number {
+    if (HSN_GST_RATES[hsnCode]) return HSN_GST_RATES[hsnCode].gstRate;
     return 0.0;
   }
-  
+
   // TO BE TESTED
   async createProduct(productData: CreateProductDto) {
     try {
       let gstRate = this.getGstRate(productData.hsnCode);
-      if(gstRate === 0.0){
+      if (gstRate === 0.0) {
         throw new NotAcceptableException('Invalid Hsncode Provided!');
       }
       let productDataObj = {
@@ -103,12 +108,13 @@ export class PdpService {
       const product = await this.prismaService.product.create({
         data: productDataObj,
       });
+      this.logger.info('Successfully created the product');
       return {
         message: 'Successfully created the product',
         product: product,
       };
     } catch (e) {
-      console.error(e);
+      this.logger.error(e, 'Create Product Service Failed!');
       throw new InternalServerErrorException('500 Internal Server Error');
     }
   }
@@ -131,8 +137,9 @@ export class PdpService {
       const productOption = await this.prismaService.productOption.create({
         data: productOptionObj,
       });
+      this.logger.info('Successfully Created the ProductOption');
       return {
-        message: 'Succesfully Created the ProductOption',
+        message: 'Successfully Created the ProductOption',
         productOption,
       };
     } catch (e) {
@@ -140,10 +147,12 @@ export class PdpService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No Product found with this ID!');
         throw new NotFoundException(
           'No ProductOptionValue or Product found with the provided id',
         );
       }
+      this.logger.error(e, 'Create Product Option Service Failed!');
       throw new InternalServerErrorException('500 Internal Server Error!');
     }
   }
@@ -163,6 +172,7 @@ export class PdpService {
             },
           },
         });
+      this.logger.info('Successfully Created the ProductOptionValue');
       return {
         message: 'Successfully Created the ProductOptionValue',
         productOptionValue,
@@ -172,6 +182,7 @@ export class PdpService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No Option Found with this ID!');
         throw new NotFoundException('404, No Option with the given Id Found!');
       }
       throw new InternalServerErrorException('500 Internal Server Error!');
@@ -194,6 +205,7 @@ export class PdpService {
             },
           },
         });
+      this.logger.info('Successfully Created a ProductVariantOption');
       return {
         message: 'Successfully Created a ProductVariantOption',
         productVariantOption: productVariantOption,
@@ -203,8 +215,10 @@ export class PdpService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No Product with the given ID Found!');
         throw new NotFoundException('404, No Product with the given Id Found!');
       }
+      this.logger.error(e, 'Create Product Variant Option Failed');
       throw new InternalServerErrorException('500 Internal Server Error!');
     }
   }
@@ -245,6 +259,7 @@ export class PdpService {
       const productVariant = await this.prismaService.productVariant.create({
         data: productVariantObj,
       });
+      this.logger.info('Successfully Created the ProductVariant');
       return {
         message: 'Successfully Created the ProductVariant',
         productVariant: productVariant,
@@ -254,8 +269,15 @@ export class PdpService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        throw new NotFoundException('404');
+        this.logger.error(
+          e,
+          'No Product/CartItems/ProductVariantImages/Discounts/ProductVariantOption Found with this ID!',
+        );
+        throw new NotFoundException(
+          'No Product/CartItems/ProductVariantImages/Discounts/ProductVariantOption Found with this ID!',
+        );
       }
+      this.logger.error(e, 'Create Product Variant Service Failed!');
       throw new InternalServerErrorException('500 Internal Server Exception!');
     }
   }

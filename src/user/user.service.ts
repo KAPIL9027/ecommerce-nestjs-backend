@@ -95,14 +95,14 @@ export class UserService {
       this.logger.info('Successfully Validated a User');
       return newToken;
     } catch (e) {
-      throw new InternalServerErrorException('Internal Server Exception');
+      this.logger.error(e, 'Validate User Service Failed');
+      throw e;
     }
   }
 
   async getUserProfile(email: string) {
-    if (!email) throw new NotAcceptableException('No Valid Email Provided!');
-    console.log(email);
     try {
+      if (!email) throw new NotAcceptableException('No Valid Email Provided!');
       const user = await this.prisma.user.findUnique({
         where: {
           email: email,
@@ -116,9 +116,10 @@ export class UserService {
       if (!user) {
         throw new NotFoundException('No User Found!');
       }
+      this.logger.info('Successfully Found a User with the given Id!');
       return user;
     } catch (e) {
-      console.error('Get User Profile Service Failed', e);
+      this.logger.error(e, 'Get User Profile Service Failed');
       throw new InternalServerErrorException('Internal Server Error');
     }
   }
