@@ -20,12 +20,14 @@ import { Request } from 'express';
 import { AddItemDto } from './add-item.dto';
 import { UpdateItemDto } from './update-item.dto';
 import { DiscountsService } from 'src/discounts/discounts.service';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class CartService {
   constructor(
     private prismaService: PrismaService,
     private discountService: DiscountsService,
+    private readonly logger: PinoLogger,
   ) {}
 
   async getCart(cartId: string) {
@@ -44,11 +46,25 @@ export class CartService {
           },
         },
       });
+      this.logger.info('Successfully fetched the Cart!');
+      return {
+        message: 'Successfully fetched the Cart!',
+        cart,
+      };
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.error(e, 'No Cart Found with this Id!');
+        throw e;
+      }
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Get Cart Service Failed!',
+      );
       throw new InternalServerErrorException('Internal Server Error!');
     }
-    if (!cart) throw new NotFoundException('No Cart Found!');
-    return cart;
   }
   async getTaxes(productVariantItems: CartItem[]) {
     const productVariants = await Promise.all(
@@ -60,7 +76,6 @@ export class CartService {
               product: true,
             },
           });
-
         return {
           qty: productVariantItem.quantity,
           productTax:
@@ -76,57 +91,78 @@ export class CartService {
     }, 0);
   }
   async createCart(cartData: CreateCartDto, req: Request) {
-    const shippingAddress = await this.prismaService.shippingAddress.findFirst({
-      where: {
-        userId: req.user!.userId,
-        isDefault: true,
-      },
-    });
-    if (!cartData.items || cartData.items.length === 0) {
-      throw new BadRequestException('Cart items are required');
-    }
-    if (!shippingAddress)
-      throw new NotFoundException(
-        'No Default Shipping Address Found for the User',
-      );
-    const [cartValue, totalDiscount] =
-      await this.discountService.getCartAndDiscountsTotal(
-        req.user!.userId,
-        cartData.items,
-      );
-    const totalTaxes = await this.getTaxes(cartData.items);
-    let totalCgst: number = 0.0;
-    let totalSgst: number = 0.0;
-    let totalIgst: number = 0.0;
-    if (shippingAddress.state === process.env.BUSINESS_STATE) {
-      totalCgst = totalTaxes / 2;
-      totalSgst = totalTaxes / 2;
-    } else {
-      totalIgst = totalTaxes;
-    }
-    await this.prismaService.cart.create({
-      data: {
-        user: { connect: { id: req.user!.userId } },
-        items: {
-          create: cartData.items,
-        },
-        shippingAddress: {
-          connect: {
-            id: shippingAddress.id,
+    try {
+      const shippingAddress =
+        await this.prismaService.shippingAddress.findFirst({
+          where: {
+            userId: req.user!.userId,
+            isDefault: true,
           },
+        });
+      if (!cartData.items || cartData.items.length === 0) {
+        throw new BadRequestException('Cart items are required');
+      }
+      if (!shippingAddress)
+        throw new NotFoundException(
+          'No Default Shipping Address Found for the User',
+        );
+      const [cartValue, totalDiscount] =
+        await this.discountService.getCartAndDiscountsTotal(
+          req.user!.userId,
+          cartData.items,
+        );
+      const totalTaxes = await this.getTaxes(cartData.items);
+      let totalCgst: number = 0.0;
+      let totalSgst: number = 0.0;
+      let totalIgst: number = 0.0;
+      if (shippingAddress.state === process.env.BUSINESS_STATE) {
+        totalCgst = totalTaxes / 2;
+        totalSgst = totalTaxes / 2;
+      } else {
+        totalIgst = totalTaxes;
+      }
+      await this.prismaService.cart.create({
+        data: {
+          user: { connect: { id: req.user!.userId } },
+          items: {
+            create: cartData.items,
+          },
+          shippingAddress: {
+            connect: {
+              id: shippingAddress.id,
+            },
+          },
+          totalDiscounts: totalDiscount,
+          totalTaxes,
+          totalCgst,
+          totalIgst,
+          totalSgst,
+          subTotal: cartValue + totalTaxes - totalDiscount,
         },
-        totalDiscounts: totalDiscount,
-        totalTaxes,
-        totalCgst,
-        totalIgst,
-        totalSgst,
-        subTotal: cartValue + totalTaxes - totalDiscount,
-      },
-    });
+      });
 
-    return {
-      message: 'Successfully created a cart!',
-    };
+      return {
+        message: 'Successfully created a cart!',
+      };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.error(
+          e,
+          'No User/ShippingAddress Found with the provided ID!',
+        );
+        throw e;
+      }
+      if (e.message === 'No Default Shipping Address Found for the User') {
+        this.logger.error(e, 'No Default Shipping Address Found for the User');
+      }
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Create Cart Service Failed',
+      );
+    }
   }
 
   async addItem(addItemDto: AddItemDto) {
@@ -165,10 +201,22 @@ export class CartService {
           },
         });
       }
+      this.logger.info('Successfully Added this Item to the Cart!');
       return {
         message: 'Successfully Added this Item to the Cart',
       };
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.error(e, 'No CartItem/Variant Found with the provided ID!');
+        throw e;
+      }
+      this.logger.error(
+        e,
+        'OOPS Something Went Wrong. Add Cart Item Service Failed!',
+      );
       throw e;
     }
   }
@@ -183,6 +231,7 @@ export class CartService {
           quantity: updateItemDto.quantity,
         },
       });
+      this.logger.info('CartItem Successfullly Updated!');
       return {
         message: 'Item successfully updated!',
       };
@@ -191,9 +240,13 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        throw new NotFoundException('No CartItem with this ID Found');
+        this.logger.error(e, 'No CartItem Found with this ID');
+        throw new NotFoundException('No CartItem Found with this ID');
       }
-      console.log('Update Item Service Failed:', e);
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Update CartItem Service Failed!',
+      );
       throw new InternalServerErrorException(
         'Oops, something went wrong. Could not update the requested Item.',
       );
@@ -207,6 +260,7 @@ export class CartService {
           id: itemId,
         },
       });
+      this.logger.info('Successfully Deleted the Cart!');
       return {
         message: 'Successfully Deleted!',
       };
@@ -215,9 +269,13 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No CartItem with this ID Found!');
         throw new NotFoundException('No CartItem with this ID Found!');
       }
-      console.log('Delete CartItem Service failed', e);
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Delete CartItem Service Failed!',
+      );
       throw new InternalServerErrorException(
         'Oops Something Went Wrong! Could not Delete the provided CartItem',
       );
@@ -231,6 +289,7 @@ export class CartService {
           id: cartId,
         },
       });
+      this.logger.info('Successfully Deleted the Cart!');
       return {
         message: 'Successfully Deleted the Cart!',
       };
@@ -239,26 +298,16 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No Cart with this ID Found!');
         throw new NotFoundException('No Cart with this ID Found');
       }
-      console.log('Delete Cart Service Failed', e);
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Delete Cart Service Failed!',
+      );
       throw new InternalServerErrorException(
         'Oops something went Wrong! Internal Server Error',
       );
     }
   }
 }
-
-type FullVariant = {
-  qty: number;
-  variant: {
-    id: string;
-    discounts: Discount[];
-    product: {
-      discounts: Discount[];
-      category: {
-        discounts: Discount[];
-      };
-    };
-  };
-};

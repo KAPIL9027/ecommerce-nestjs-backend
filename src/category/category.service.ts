@@ -8,10 +8,14 @@ import { CreateCategoryDto } from './create-category.dto';
 import { PrismaService } from 'src/prisma.service';
 import { UpdateCategoryDto } from './update-category.dto';
 import { Prisma } from '@prisma/client';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class CategoryService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private readonly logger: PinoLogger,
+  ) {}
   async createCategory(categoryData: CreateCategoryDto) {
     try {
       let categoryObj = {
@@ -47,11 +51,17 @@ export class CategoryService {
       const category = await this.prismaService.category.create({
         data: categoryObj,
       });
+
+      this.logger.info('Successfully Created a Category');
       return {
         message: 'Successfully Created a Category',
         category,
       };
     } catch (e) {
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Create Category Service Failed!',
+      );
       throw new InternalServerErrorException('500, Internal Server Error!');
     }
   }
@@ -73,30 +83,38 @@ export class CategoryService {
       }
       if ('parentId' in updateCategoryData) {
         categoryObj['parent'] = {
-          set: updateCategoryData.parentId ? {
-            id: updateCategoryData.parentId,
-          } : [],
+          set: updateCategoryData.parentId
+            ? {
+                id: updateCategoryData.parentId,
+              }
+            : [],
         };
       }
       if ('subCategoriesIds' in updateCategoryData) {
         categoryObj['subcategories'] = {
-          set: updateCategoryData.subCategoriesIds ? updateCategoryData.subCategoriesIds.map((subCategoryId) => ({
-            id: subCategoryId,
-          })) : []
+          set: updateCategoryData.subCategoriesIds
+            ? updateCategoryData.subCategoriesIds.map((subCategoryId) => ({
+                id: subCategoryId,
+              }))
+            : [],
         };
       }
       if ('imagesIds' in updateCategoryData) {
         categoryObj['images'] = {
-          set: updateCategoryData.imagesIds ? updateCategoryData.imagesIds.map((imageId) => ({
-            id: imageId,
-          })) : [],
+          set: updateCategoryData.imagesIds
+            ? updateCategoryData.imagesIds.map((imageId) => ({
+                id: imageId,
+              }))
+            : [],
         };
       }
       if ('discountsIds' in updateCategoryData) {
         categoryObj['discounts'] = {
-          connect: updateCategoryData.discountsIds ? updateCategoryData.discountsIds.map((discountId) => ({
-            id: discountId,
-          })) : []
+          connect: updateCategoryData.discountsIds
+            ? updateCategoryData.discountsIds.map((discountId) => ({
+                id: discountId,
+              }))
+            : [],
         };
       }
 
@@ -106,11 +124,13 @@ export class CategoryService {
         },
         data: categoryObj,
       });
+      this.logger.info('Successfully Updated a Category');
       return {
         message: 'Successfully Updated a Category',
         category,
       };
     } catch (e) {
+      this.logger.error(e, 'Update Category Service Failed!');
       throw e;
     }
   }
@@ -122,6 +142,7 @@ export class CategoryService {
           id: categoryId,
         },
       });
+      this.logger.info('Successfully Deleted the Category!');
       return {
         message: 'Successfully Deleted the Category',
         deletedCategory,
@@ -131,6 +152,7 @@ export class CategoryService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No Category with this id Found!');
         throw new NotFoundException('404, No Category with this id Found!');
       }
       throw new InternalServerErrorException('500, Internal Server Error!');

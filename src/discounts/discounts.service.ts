@@ -10,10 +10,14 @@ import { CreateDiscountDto } from './create-discount.dto';
 import { CreateDiscountCodeDto } from './create-discountcode.dto';
 import { UpdateDiscountDto } from './update-discount.dto';
 import { UpdateDiscountCodeDto } from './update-discount-code.dto';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class DiscountsService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private readonly logger: PinoLogger,
+  ) {}
 
   filterData(discountCodes, cartValue?: number) {
     return discountCodes.filter((discountCode) => {
@@ -41,36 +45,38 @@ export class DiscountsService {
   ) {
     let totalDiscount = 0.0;
     const productVariants = await Promise.all(
-      productVariantsItems.map(async (productVariantItem: CartItem | OrderItem) => {
-        const variant = await this.prismaService.productVariant.findFirst({
-          where: { id: productVariantItem.variantId },
-          include: {
-            discounts: true,
-            product: {
-              include: {
-                discounts: true,
-                category: {
-                  include: {
-                    discounts: true,
+      productVariantsItems.map(
+        async (productVariantItem: CartItem | OrderItem) => {
+          const variant = await this.prismaService.productVariant.findFirst({
+            where: { id: productVariantItem.variantId },
+            include: {
+              discounts: true,
+              product: {
+                include: {
+                  discounts: true,
+                  category: {
+                    include: {
+                      discounts: true,
+                    },
                   },
                 },
               },
             },
-          },
-        });
+          });
 
-        if (!variant || !variant.price) {
-          throw new Error(
-            `Variant not found or price missing for ID: ${productVariantItem.variantId}`,
-          );
-        }
+          if (!variant || !variant.price) {
+            throw new Error(
+              `Variant not found or price missing for ID: ${productVariantItem.variantId}`,
+            );
+          }
 
-        return {
-          qty: productVariantItem.quantity,
-          price: variant?.price,
-          variant,
-        };
-      }),
+          return {
+            qty: productVariantItem.quantity,
+            price: variant?.price,
+            variant,
+          };
+        },
+      ),
     );
     let cartValue = productVariants.reduce((accumulator, productVariant) => {
       return accumulator + productVariant.price * productVariant.qty;
@@ -163,6 +169,7 @@ export class DiscountsService {
           codes: true,
         },
       });
+      this.logger.info('Created Discount Successfully!');
       return {
         discount: discount,
       };
@@ -171,8 +178,10 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.message === 'P2025'
       ) {
+        this.logger.error(e, 'No Discount with this ID Found!');
         throw new NotFoundException('No Discount with this Id Found!');
       }
+      this.logger.error(e, 'Get Discount Service Failed!');
       throw new InternalServerErrorException('Internal Server Error');
     }
   }
@@ -213,12 +222,16 @@ export class DiscountsService {
       const createdDiscount = await this.prismaService.discount.create({
         data: dataObj,
       });
+      this.logger.info('Successfully Created Specified Discount!');
       return {
         message: 'Successfully Created Specified Discount',
         discount: createdDiscount,
       };
     } catch (e) {
-      console.error(e);
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong!. Create Discount Service Failed!',
+      );
       throw new InternalServerErrorException('500 Internal Server Error!');
     }
   }
@@ -251,12 +264,16 @@ export class DiscountsService {
       const createdDiscountCode = await this.prismaService.discountCode.create({
         data: dataObj,
       });
+      this.logger.info('Successfully Created the DiscountCode');
       return {
         message: 'Successfully Created the DiscountCode',
         discountCode: createdDiscountCode,
       };
     } catch (e) {
-      console.error(e);
+      this.logger.error(
+        e,
+        'OOPS, Someting Went Wrong. Create DiscountCode Service Failed!',
+      );
       throw new InternalServerErrorException('500 Internal Server Error');
     }
   }
@@ -271,6 +288,7 @@ export class DiscountsService {
           discount: true,
         },
       });
+      this.logger.info('Successfully fetched DiscountCode with the given ID!');
       return {
         message: 'Successfully fetched Discountcode with the given Id',
         discountCode: getDiscountCode,
@@ -280,6 +298,7 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No DiscountCode with this ID Found!');
         throw new NotFoundException('404 Not Found');
       }
       throw new InternalServerErrorException('500 Internal Server Exception');
@@ -297,6 +316,7 @@ export class DiscountsService {
         },
         data: updateDiscountData,
       });
+      this.logger.info('Successfully Updated the Discount!');
       return {
         message: 'Successfully Updated the Discount!',
         updatedDiscount: updatedDiscount,
@@ -306,6 +326,7 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No Discount with the specified ID Found!');
         throw new NotFoundException('404 Not Found!');
       }
       throw new InternalServerErrorException('500 Internal Server Exception');
@@ -317,25 +338,29 @@ export class DiscountsService {
     updateDiscountCodeData: UpdateDiscountCodeDto,
   ) {
     try {
-      console.log(updateDiscountCodeId);
       const updatedDiscountCode = await this.prismaService.discountCode.update({
         where: {
           id: updateDiscountCodeId,
         },
         data: updateDiscountCodeData,
       });
+      this.logger.info('Successfully Updated the DiscountCode');
       return {
         message: 'New Discount Code Created',
         updatedDiscountCode: updatedDiscountCode,
       };
     } catch (e) {
-      console.error(e);
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
         throw new NotFoundException('404 Not Found!');
       }
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Update DiscountCode Service Failed!',
+      );
+      throw new InternalServerErrorException('OOPS, Something Went Wrong!');
     }
   }
 
@@ -346,6 +371,7 @@ export class DiscountsService {
           id: discountCodeId,
         },
       });
+      this.logger.info('Successfully Deleted DiscountCode!');
       return {
         message: 'Successfully Deleted DiscountCode',
         deletedDiscountCode: deletedDiscountCode,
@@ -355,8 +381,10 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.error(e, 'No DiscountCode with this error!');
         throw new NotFoundException('404 Not Found!');
       }
+      this.logger.error(e, 'OOPS, Something Went Wrong!');
       throw new InternalServerErrorException('500 Internal Server Error');
     }
   }
@@ -367,6 +395,7 @@ export class DiscountsService {
           id: discountId,
         },
       });
+      this.logger.info('Successfully Deleted Discount!');
       return {
         message: 'Successfully Deleted Discount',
         deletedDiscount: deletedDiscount,
@@ -376,8 +405,10 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.info('No Discount Found with this ID!');
         throw new NotFoundException('404 Not Found!');
       }
+      this.logger.error(e, 'OOPS, Something Went Wrong!');
       throw new InternalServerErrorException('500 Internal Server Error');
     }
   }
