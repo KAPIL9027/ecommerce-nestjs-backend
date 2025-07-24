@@ -23,7 +23,10 @@ export class PaymentService {
       const createdPayment = await this.prismaService.payment.create({
         data: createPaymentBody,
       });
-      this.logger.info('Successfully Created the Payment');
+      this.logger.info(
+        { paymentId: createdPayment.id },
+        'Successfully Created the Payment',
+      );
       return {
         message: 'Successfully created the Payment',
         createdPayment,

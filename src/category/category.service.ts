@@ -52,13 +52,16 @@ export class CategoryService {
         data: categoryObj,
       });
 
-      this.logger.info('Successfully Created a Category');
+      this.logger.info(
+        { categoryId: category.id },
+        'Successfully Created a Category',
+      );
       return {
         message: 'Successfully Created a Category',
         category,
       };
     } catch (e) {
-      this.logger.error(
+      this.logger.warn(
         e,
         'OOPS, Something Went Wrong. Create Category Service Failed!',
       );
@@ -124,12 +127,22 @@ export class CategoryService {
         },
         data: categoryObj,
       });
-      this.logger.info('Successfully Updated a Category');
+      this.logger.info(
+        { categoryId: category.id },
+        'Successfully Updated a Category',
+      );
       return {
         message: 'Successfully Updated a Category',
         category,
       };
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.warn(e, 'No Category Found with this ID!');
+        throw e;
+      }
       this.logger.error(e, 'Update Category Service Failed!');
       throw e;
     }
@@ -142,7 +155,7 @@ export class CategoryService {
           id: categoryId,
         },
       });
-      this.logger.info('Successfully Deleted the Category!');
+      this.logger.info({ categoryId }, 'Successfully Deleted the Category!');
       return {
         message: 'Successfully Deleted the Category',
         deletedCategory,
@@ -152,9 +165,13 @@ export class CategoryService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No Category with this id Found!');
+        this.logger.warn(e, 'No Category with this id Found!');
         throw new NotFoundException('404, No Category with this id Found!');
       }
+      this.logger.error(
+        e,
+        'OOPS, Something went wrong. Delete Category Service Failed!',
+      );
       throw new InternalServerErrorException('500, Internal Server Error!');
     }
   }

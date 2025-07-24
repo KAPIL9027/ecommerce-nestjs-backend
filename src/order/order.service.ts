@@ -15,7 +15,9 @@ export class OrderService {
   constructor(
     private prismaService: PrismaService,
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    logger.setContext(OrderService.name);
+  }
 
   async checkout(req: Request) {
     try {
@@ -30,7 +32,7 @@ export class OrderService {
 
       if (!cart) throw new NotFoundException('No Cart Found!');
 
-      await this.prismaService.order.create({
+      const order = await this.prismaService.order.create({
         data: {
           userId: req.user!.userId,
           items: {
@@ -50,7 +52,7 @@ export class OrderService {
           subTotal: cart.subTotal,
         },
       });
-      this.logger.info('Successfully Placed a Order');
+      this.logger.info({ orderId: order.id }, 'Successfully Placed a Order');
       return {
         message: 'Successfully Placed a Order',
       };
@@ -59,10 +61,7 @@ export class OrderService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(
-          e,
-          'Cannot find specified VariantId/ShippingAddress!',
-        );
+        this.logger.warn(e, 'Cannot find specified VariantId/ShippingAddress!');
         throw e;
       }
       this.logger.error(e, 'Checkout Service Failed');
@@ -78,7 +77,10 @@ export class OrderService {
           deletedAt: null,
         },
       });
-      this.logger.info('Successfully Fetched all the Valid Orders');
+      this.logger.info(
+        { userId: req.user!.userId },
+        'Successfully Fetched all the Valid Orders',
+      );
       return {
         message: 'Successfully Fetched All the Valid Orders.',
         orders,
@@ -88,7 +90,7 @@ export class OrderService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No User Found with the provided ID!');
+        this.logger.warn(e, 'No User Found with the provided ID!');
         throw new NotFoundException('No User Found with the provided ID!');
       }
       this.logger.error(e, 'Get All Orders Service Failed');
@@ -105,18 +107,17 @@ export class OrderService {
           status: updateOrderBody.status,
         },
       });
-      this.logger.info('Successfully Updated the Order!');
+      this.logger.info({ orderId }, 'Successfully Updated the Order!');
       return {
         message: 'Successfully Updated the Order!',
         updatedOrder,
       };
     } catch (e) {
-      console.error(e);
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No Order with this ID Found!');
+        this.logger.warn(e, 'No Order with this ID Found!');
         throw new NotFoundException('No Order with this Id Found!');
       }
       throw new InternalServerErrorException('Update Order Service Failed!');
@@ -134,7 +135,10 @@ export class OrderService {
         },
       });
 
-      this.logger.info('Successfully Deleted the Order!');
+      this.logger.info(
+        { orderId: deletedOrder.id },
+        'Successfully Deleted the Order!',
+      );
       return {
         message: 'Successfully Deleted the Order!',
         order: deletedOrder,
@@ -144,10 +148,14 @@ export class OrderService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No Order Found with the given ID!');
+        this.logger.warn(e, 'No Order Found with the given ID!');
         throw new NotFoundException('No Order Found with the given ID!');
       }
-      throw new InternalServerErrorException('DeleteOrder Service Failed!');
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Delete Order Service Failed!',
+      );
+      throw new InternalServerErrorException('OOPS, Something Went Wrong.');
     }
   }
 }

@@ -7,11 +7,17 @@ import {
 import { CreateBannerDto } from './create-banner.dto';
 import { PrismaService } from 'src/prisma.service';
 import { Prisma } from '@prisma/client';
+import { PinoLogger } from 'nestjs-pino';
 import { UpdateBannerDto } from './update-banner.dto';
 
 @Injectable()
 export class BannerService {
-  constructor(private prismaService: PrismaService) {}
+  constructor(
+    private prismaService: PrismaService,
+    private readonly logger: PinoLogger,
+  ) {
+    logger.setContext(BannerService.name);
+  }
 
   async createBanner(createBannerBody: CreateBannerDto) {
     try {
@@ -32,6 +38,11 @@ export class BannerService {
       const banner = await this.prismaService.banner.create({
         data: bannerObj,
       });
+
+      this.logger.info(
+        { bannerId: banner.id },
+        'Successfully Created the Banner!',
+      );
       return {
         message: 'Successfully created the Banner',
         banner,
@@ -41,8 +52,10 @@ export class BannerService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.warn(e, 'Not Found Images with the provided ID');
         throw new NotFoundException('404, Not Found!');
       }
+      this.logger.error(e, 'Create Banner Service Failed!');
       throw new InternalServerErrorException('OOPS, Something went wrong!');
     }
   }
@@ -75,20 +88,24 @@ export class BannerService {
         },
         data: updateBannerObj,
       });
+      this.logger.info({ bannerId }, 'Successfully Updated the Banner');
       return {
         message: 'Successfully updated the banner',
         updatedBanner,
       };
     } catch (e) {
       if (e instanceof NotAcceptableException) {
+        this.logger.warn(e, 'No Data Provided for updation');
         throw e;
       }
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.warn(e, 'No Banner Found with the given ID');
         throw new NotFoundException('404, No Banner Found with the given id');
       }
+      this.logger.error(e, 'Update Banner Service Failed!');
       throw new InternalServerErrorException('OOPS, Something went wrong!');
     }
   }
@@ -100,17 +117,23 @@ export class BannerService {
           id: bannerId,
         },
       });
+      this.logger.info({ bannerId }, 'Successfully Deleted the Banner!');
       return {
         message: 'Successfully Deleted the Banner!',
-        deletedBanner
+        deletedBanner,
       };
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.warn(e, 'No Banner Found with this ID!');
         throw new NotFoundException('404, No Banner Found with this ID!');
       }
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Delete Banner Service Failed!',
+      );
       throw new InternalServerErrorException('500, Internal Server Error!');
     }
   }

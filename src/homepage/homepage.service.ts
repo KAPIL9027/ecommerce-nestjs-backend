@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { Banner, Category, Product } from 'generated/prisma';
 import { PinoLogger } from 'nestjs-pino';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class HomepageService {
@@ -61,6 +62,16 @@ export class HomepageService {
       this.logger.info('Successfully fetched the widgets for the Homepage');
       return populatedWidgets;
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.warn(
+          e,
+          'No Product/Category/Banner with the given Id Found!',
+        );
+        throw e;
+      }
       this.logger.error(e, 'Get Widgets Service Failed!');
       throw e;
     }

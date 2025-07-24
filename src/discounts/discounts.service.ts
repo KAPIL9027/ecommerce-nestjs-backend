@@ -169,7 +169,7 @@ export class DiscountsService {
           codes: true,
         },
       });
-      this.logger.info('Created Discount Successfully!');
+      this.logger.info({ discountId }, 'Created Discount Successfully!');
       return {
         discount: discount,
       };
@@ -178,7 +178,7 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.message === 'P2025'
       ) {
-        this.logger.error(e, 'No Discount with this ID Found!');
+        this.logger.warn(e, 'No Discount with this ID Found!');
         throw new NotFoundException('No Discount with this Id Found!');
       }
       this.logger.error(e, 'Get Discount Service Failed!');
@@ -222,12 +222,25 @@ export class DiscountsService {
       const createdDiscount = await this.prismaService.discount.create({
         data: dataObj,
       });
-      this.logger.info('Successfully Created Specified Discount!');
+      this.logger.info(
+        { discountId: createdDiscount.id },
+        'Successfully Created Specified Discount!',
+      );
       return {
         message: 'Successfully Created Specified Discount',
         discount: createdDiscount,
       };
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.warn(
+          e,
+          'No Product/Variant/Category/Code Found with the given ID!',
+        );
+        throw e;
+      }
       this.logger.error(
         e,
         'OOPS, Something Went Wrong!. Create Discount Service Failed!',
@@ -264,12 +277,22 @@ export class DiscountsService {
       const createdDiscountCode = await this.prismaService.discountCode.create({
         data: dataObj,
       });
-      this.logger.info('Successfully Created the DiscountCode');
+      this.logger.info(
+        { discountCodeId: createdDiscountCode.id },
+        'Successfully Created the DiscountCode',
+      );
       return {
         message: 'Successfully Created the DiscountCode',
         discountCode: createdDiscountCode,
       };
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.warn(e, 'No Discount Found with the provided ID!');
+        throw e;
+      }
       this.logger.error(
         e,
         'OOPS, Someting Went Wrong. Create DiscountCode Service Failed!',
@@ -288,7 +311,10 @@ export class DiscountsService {
           discount: true,
         },
       });
-      this.logger.info('Successfully fetched DiscountCode with the given ID!');
+      this.logger.info(
+        { discountCodeId },
+        'Successfully fetched DiscountCode with the given ID!',
+      );
       return {
         message: 'Successfully fetched Discountcode with the given Id',
         discountCode: getDiscountCode,
@@ -316,7 +342,10 @@ export class DiscountsService {
         },
         data: updateDiscountData,
       });
-      this.logger.info('Successfully Updated the Discount!');
+      this.logger.info(
+        { dicountId: discountId },
+        'Successfully Updated the Discount!',
+      );
       return {
         message: 'Successfully Updated the Discount!',
         updatedDiscount: updatedDiscount,
@@ -326,7 +355,7 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No Discount with the specified ID Found!');
+        this.logger.warn(e, 'No Discount with the specified ID Found!');
         throw new NotFoundException('404 Not Found!');
       }
       throw new InternalServerErrorException('500 Internal Server Exception');
@@ -344,7 +373,10 @@ export class DiscountsService {
         },
         data: updateDiscountCodeData,
       });
-      this.logger.info('Successfully Updated the DiscountCode');
+      this.logger.info(
+        { discountCodeId: updateDiscountCodeId },
+        'Successfully Updated the DiscountCode',
+      );
       return {
         message: 'New Discount Code Created',
         updatedDiscountCode: updatedDiscountCode,
@@ -354,6 +386,7 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
+        this.logger.warn(e, 'No DiscountCode with this ID Found');
         throw new NotFoundException('404 Not Found!');
       }
       this.logger.error(
@@ -371,7 +404,10 @@ export class DiscountsService {
           id: discountCodeId,
         },
       });
-      this.logger.info('Successfully Deleted DiscountCode!');
+      this.logger.info(
+        { discountCodeId },
+        'Successfully Deleted DiscountCode!',
+      );
       return {
         message: 'Successfully Deleted DiscountCode',
         deletedDiscountCode: deletedDiscountCode,
@@ -381,7 +417,7 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No DiscountCode with this error!');
+        this.logger.warn(e, 'No DiscountCode with this error!');
         throw new NotFoundException('404 Not Found!');
       }
       this.logger.error(e, 'OOPS, Something Went Wrong!');
@@ -395,7 +431,7 @@ export class DiscountsService {
           id: discountId,
         },
       });
-      this.logger.info('Successfully Deleted Discount!');
+      this.logger.info({ discountId }, 'Successfully Deleted Discount!');
       return {
         message: 'Successfully Deleted Discount',
         deletedDiscount: deletedDiscount,
@@ -405,10 +441,13 @@ export class DiscountsService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.info('No Discount Found with this ID!');
+        this.logger.warn(e, 'No Discount Found with this ID!');
         throw new NotFoundException('404 Not Found!');
       }
-      this.logger.error(e, 'OOPS, Something Went Wrong!');
+      this.logger.error(
+        e,
+        'OOPS, Something Went Wrong. Delete Discount Service Failed.',
+      );
       throw new InternalServerErrorException('500 Internal Server Error');
     }
   }

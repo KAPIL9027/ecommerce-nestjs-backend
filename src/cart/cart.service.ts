@@ -5,14 +5,7 @@ import {
   NotAcceptableException,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  Cart,
-  Discount,
-  DiscountCode,
-  Prisma,
-  ProductVariant,
-  ShippingAddress,
-} from '@prisma/client';
+import { Cart, Prisma } from '@prisma/client';
 import { CartItem } from './cart-item.dto';
 import { PrismaService } from 'src/prisma.service';
 import { CreateCartDto } from './create-cart.dto';
@@ -46,7 +39,7 @@ export class CartService {
           },
         },
       });
-      this.logger.info('Successfully fetched the Cart!');
+      this.logger.info({ cartId }, 'Successfully fetched the Cart!');
       return {
         message: 'Successfully fetched the Cart!',
         cart,
@@ -56,7 +49,7 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No Cart Found with this Id!');
+        this.logger.warn(e, 'No Cart Found with this Id!');
         throw e;
       }
       this.logger.error(
@@ -121,7 +114,7 @@ export class CartService {
       } else {
         totalIgst = totalTaxes;
       }
-      await this.prismaService.cart.create({
+      const cart = await this.prismaService.cart.create({
         data: {
           user: { connect: { id: req.user!.userId } },
           items: {
@@ -140,7 +133,7 @@ export class CartService {
           subTotal: cartValue + totalTaxes - totalDiscount,
         },
       });
-
+      this.logger.info({ cartId: cart.id }, 'Successfully Created the Cart!');
       return {
         message: 'Successfully created a cart!',
       };
@@ -149,7 +142,7 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(
+        this.logger.warn(
           e,
           'No User/ShippingAddress Found with the provided ID!',
         );
@@ -201,7 +194,10 @@ export class CartService {
           },
         });
       }
-      this.logger.info('Successfully Added this Item to the Cart!');
+      this.logger.info(
+        { cartId: addItemDto.cartId },
+        'Successfully Added this Item to the Cart!',
+      );
       return {
         message: 'Successfully Added this Item to the Cart',
       };
@@ -210,7 +206,7 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No CartItem/Variant Found with the provided ID!');
+        this.logger.warn(e, 'No CartItem/Variant Found with the provided ID!');
         throw e;
       }
       this.logger.error(
@@ -231,7 +227,7 @@ export class CartService {
           quantity: updateItemDto.quantity,
         },
       });
-      this.logger.info('CartItem Successfullly Updated!');
+      this.logger.info({cartItemId: itemId},'CartItem Successfullly Updated!');
       return {
         message: 'Item successfully updated!',
       };
@@ -240,7 +236,7 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No CartItem Found with this ID');
+        this.logger.warn(e, 'No CartItem Found with this ID');
         throw new NotFoundException('No CartItem Found with this ID');
       }
       this.logger.error(
@@ -260,7 +256,7 @@ export class CartService {
           id: itemId,
         },
       });
-      this.logger.info('Successfully Deleted the Cart!');
+      this.logger.info({cartItemId: itemId},'Successfully Deleted the Cart!');
       return {
         message: 'Successfully Deleted!',
       };
@@ -289,7 +285,7 @@ export class CartService {
           id: cartId,
         },
       });
-      this.logger.info('Successfully Deleted the Cart!');
+      this.logger.info({cartId},'Successfully Deleted the Cart!');
       return {
         message: 'Successfully Deleted the Cart!',
       };
@@ -298,7 +294,7 @@ export class CartService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No Cart with this ID Found!');
+        this.logger.warn(e, 'No Cart with this ID Found!');
         throw new NotFoundException('No Cart with this ID Found');
       }
       this.logger.error(
