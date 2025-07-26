@@ -64,11 +64,11 @@ export class ReviewService {
       };
       if (createReviewDto.title) dataObj['title'] = createReviewDto.title;
       if (createReviewDto.comment) dataObj['comment'] = createReviewDto.comment;
-      await this.prismaService.review.create({
+      const review = await this.prismaService.review.create({
         data: dataObj,
       });
 
-      this.logger.info('Review Created Successfully!');
+      this.logger.info({ reviewId: review.id }, 'Review Created Successfully!');
       return {
         message: 'Review Created Successfully, Thank you!',
       };
@@ -77,7 +77,7 @@ export class ReviewService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        this.logger.error(
+        this.logger.warn(
           e,
           'User has already submitted a review for this product',
         );
@@ -90,7 +90,7 @@ export class ReviewService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'Cannot find any User with the given ID!');
+        this.logger.warn(e, 'Cannot find any User with the given ID!');
         throw new NotFoundException('404 Not Found Exception');
       }
       this.logger.error(e, 'Create Review Service Failed!');

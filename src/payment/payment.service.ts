@@ -53,6 +53,7 @@ export class PaymentService {
         throw new NotAcceptableException(
           'Not Valid Signature/PayLoad Provided!',
         );
+      this.logger.info('Successfully verified the payment');
       return {
         message: 'Payment Details verified Successfully!',
       };

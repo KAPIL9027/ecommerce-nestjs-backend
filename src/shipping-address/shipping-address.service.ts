@@ -39,7 +39,10 @@ export class ShippingAddressService {
           isDefault: shippingAddressData.isDefault,
         },
       });
-      this.logger.info('Successfully Created a Shipping Address for the User!');
+      this.logger.info(
+        { shippingAddressId: shippingAddress.id },
+        'Successfully Created a Shipping Address for the User!',
+      );
       return {
         message: 'Shipping Address Successfully Created for the provided User',
         shippingAddress,
@@ -49,7 +52,7 @@ export class ShippingAddressService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(e, 'No User Found with this id!');
+        this.logger.warn(e, 'No User Found with this id!');
         throw new NotFoundException('No User Found with this id!');
       }
       this.logger.error(e, 'Create Shipping Address Service Failed');

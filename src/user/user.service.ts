@@ -51,7 +51,7 @@ export class UserService {
           secret: process.env.JWT_SECRET,
         },
       );
-      this.logger.info('User Created Successfully');
+      this.logger.info({ userId: user.id }, 'User Created Successfully');
       return token;
     } catch (e) {
       if (e instanceof Prisma.PrismaClientValidationError) {
@@ -92,10 +92,15 @@ export class UserService {
           secret: process.env.JWT_SECRET,
         },
       );
-      this.logger.info('Successfully Validated a User');
+      this.logger.info(
+        { userId: userExists.id },
+        'Successfully Validated a User',
+      );
       return newToken;
     } catch (e) {
-      this.logger.error(e, 'Validate User Service Failed');
+      if (e instanceof NotFoundException) {
+        this.logger.warn(e, 'No User Found!');
+      } else this.logger.error(e, 'Validate User Service Failed');
       throw e;
     }
   }
@@ -116,7 +121,10 @@ export class UserService {
       if (!user) {
         throw new NotFoundException('No User Found!');
       }
-      this.logger.info('Successfully Found a User with the given Id!');
+      this.logger.info(
+        { userId: user.id },
+        'Successfully Found a User with the given Id!',
+      );
       return user;
     } catch (e) {
       this.logger.error(e, 'Get User Profile Service Failed');

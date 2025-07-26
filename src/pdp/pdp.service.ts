@@ -259,7 +259,10 @@ export class PdpService {
       const productVariant = await this.prismaService.productVariant.create({
         data: productVariantObj,
       });
-      this.logger.info('Successfully Created the ProductVariant');
+      this.logger.info(
+        { productVariantId: productVariant.id },
+        'Successfully Created the ProductVariant',
+      );
       return {
         message: 'Successfully Created the ProductVariant',
         productVariant: productVariant,
@@ -269,7 +272,7 @@ export class PdpService {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
       ) {
-        this.logger.error(
+        this.logger.warn(
           e,
           'No Product/CartItems/ProductVariantImages/Discounts/ProductVariantOption Found with this ID!',
         );
