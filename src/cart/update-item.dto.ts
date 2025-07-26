@@ -1,6 +1,11 @@
-import { IsInt, IsString } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsInt } from 'class-validator';
 
 export class UpdateItemDto {
-    @IsInt()
-    quantity: number
+  @ApiProperty({
+    example: 2,
+    description: 'quantity of the item to be updated',
+  })
+  @IsInt()
+  quantity: number;
 }

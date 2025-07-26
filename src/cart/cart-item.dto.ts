@@ -1,9 +1,18 @@
-import { IsInt, IsNumber, IsString, Min } from "class-validator";
+import { ApiProperty } from '@nestjs/swagger';
+import { IsInt, IsNumber, IsString, Min } from 'class-validator';
 
 export class CartItem {
-    @IsString()
-    variantId: string
-    @IsInt()
-    @Min(1)
-    quantity: number
+  @ApiProperty({
+    example: '34343434344',
+    description: 'Id of the variant',
+  })
+  @IsString()
+  variantId: string;
+  @ApiProperty({
+    example: 2,
+    description: 'Quantity of the cart-item',
+  })
+  @IsInt()
+  @Min(1)
+  quantity: number;
 }
