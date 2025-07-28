@@ -6,15 +6,18 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { csrfMiddleware } from './csrf.middleware';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import * as fs from 'fs';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
 
   app.useLogger(app.get(Logger));
   app.enableCors({
-    crendentials: true,
+    credentials: true,
   });
   app.use(helmet());
   app.use(cookieParser());
@@ -28,11 +31,22 @@ async function bootstrap() {
     )
     .setVersion('1.0')
     .addTag('ecommerce')
+    .addCookieAuth('Authentication')
     .build();
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
 
   SwaggerModule.setup('api', app, documentFactory);
+  const staticFilePath = join(__dirname, '..', 'public');
+  console.log(staticFilePath);
+  console.log(
+    'STATIC FILE EXISTS?',
+    fs.existsSync(staticFilePath),
+    staticFilePath,
+  );
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/',
+  });
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();

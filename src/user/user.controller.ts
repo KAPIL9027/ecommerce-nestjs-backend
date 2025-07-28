@@ -32,7 +32,7 @@ export class UserController {
     try {
       const token = await this.userService.validateUser(validateUserDto);
       const csrfToken = (req as any).csrfToken();
-      res.cookie('XSRF-TOKEN',csrfToken);
+      res.cookie('XSRF-TOKEN', csrfToken);
       res.cookie('token', token, {
         httpOnly: true,
         sameSite: 'lax',
@@ -42,7 +42,7 @@ export class UserController {
 
       return {
         message: 'You are logged in!',
-        csrfToken
+        csrfToken,
       };
     } catch (e) {
       console.error(e);
@@ -54,9 +54,12 @@ export class UserController {
   @Post('signup')
   async createUser(
     @Body() dto: CreateUserDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
     const token = await this.userService.createUser(dto);
+    const csrfToken = (req as any).csrfToken();
+    res.cookie('XSRF-TOKEN', csrfToken);
     res.cookie('token', token, {
       httpOnly: true,
       sameSite: 'lax',
@@ -65,6 +68,7 @@ export class UserController {
     });
     return {
       message: 'Succesfully create a new user',
+      csrfToken,
     };
   }
 

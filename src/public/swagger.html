@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Swagger UI</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/swagger-ui-dist/swagger-ui.css"
+    />
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+    <script>
+      const csrfToken = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith('XSRF-TOKEN='))
+        ?.split('=')[1];
+
+      const ui = SwaggerUIBundle({
+        url: '/api-json',
+        dom_id: '#swagger-ui',
+        requestInterceptor: (req) => {
+          if (csrfToken) {
+            req.headers['csrf-token'] = csrfToken;
+          }
+          return req;
+        },
+      });
+    </script>
+  </body>
+</html>

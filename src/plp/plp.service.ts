@@ -19,7 +19,7 @@ export class PlpService {
       obj['brand'] = reqData.brand;
     }
     if (reqData?.isNew) {
-      obj['isNew'] = reqData.isNew === 'true';
+      obj['isNew'] = reqData.isNew === true;
     }
     return obj;
   }
