@@ -16,6 +16,9 @@ import { Request, Response } from 'express';
 import { ValidateUserDto } from './validate-user.dto';
 import { JWTCookieGuard } from './valid-user.guard';
 import { Throttle } from '@nestjs/throttler';
+import { RolesGuard } from './admin-user.guard';
+import { Roles } from 'src/decorators/roles.decorator';
+import { MakeAdminDto } from './make-admin.dto';
 
 @Controller('user')
 export class UserController {
@@ -72,6 +75,13 @@ export class UserController {
     };
   }
 
+  @Throttle({default: {ttl: 60000, limit: 2}})
+  @Post('admin/make-admin')
+  @UseGuards(JWTCookieGuard,RolesGuard)
+  @Roles('ADMIN')
+  async makeAdmin(makeAdminDto: MakeAdminDto ){
+    return this.userService.makeAdmin(makeAdminDto);
+  }
   @Throttle({ default: { ttl: 60000, limit: 30 } })
   @Get('profile')
   @UseGuards(JWTCookieGuard)

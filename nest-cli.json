@@ -8,6 +8,18 @@
       {
         "include": "public/swagger.html",
         "outDir": "dist"
+      },
+      {
+        "include": "public/swagger-ui.css",
+        "outDir": "dist"
+      },
+      {
+        "include": "public/swagger-ui-bundle.js",
+        "outDir": "dist"
+      },
+      {
+        "include": "public/swagger-init.js",
+        "outDir": "dist"
       }
     ]
   }

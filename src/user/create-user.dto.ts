@@ -27,12 +27,4 @@ export class CreateUserDto {
   })
   @MinLength(6)
   password: string;
-
-  @IsOptional()
-  @IsString()
-  @ApiProperty({
-    example: 'ADMIN',
-    description: 'Select the role. ADMIN or USER',
-  })
-  role?: string;
 }

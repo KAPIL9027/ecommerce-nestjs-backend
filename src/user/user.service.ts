@@ -13,6 +13,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ValidateUserDto } from './validate-user.dto';
 import { Prisma } from '@prisma/client';
 import { PinoLogger } from 'nestjs-pino';
+import { MakeAdminDto } from './make-admin.dto';
 
 @Injectable()
 export class UserService {
@@ -32,10 +33,6 @@ export class UserService {
         name: dto.name,
         password: hashedPassword,
       };
-
-      if (dto.role) {
-        dataObj['role'] = dto.role;
-      }
       const user = await this.prisma.user.create({
         data: dataObj,
       });
@@ -45,7 +42,6 @@ export class UserService {
           userId: user.id,
           name: user.name,
           email: user.email,
-          role: user.role,
         },
         {
           secret: process.env.JWT_SECRET,
@@ -129,6 +125,37 @@ export class UserService {
     } catch (e) {
       this.logger.error(e, 'Get User Profile Service Failed');
       throw new InternalServerErrorException('Internal Server Error');
+    }
+  }
+
+  async makeAdmin(makeAdminDto: MakeAdminDto) {
+    try {
+      const res = await this.prisma.user.update({
+        where: {
+          id: makeAdminDto.userId,
+        },
+        data: {
+          role: 'ADMIN',
+        },
+      });
+      this.logger.info(
+        { userId: makeAdminDto.userId },
+        'Successfully made the user as an ADMIN.',
+      );
+      return {
+        message: 'Successfully made the user as an ADMIN User.',
+        user: res,
+      };
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        this.logger.warn({ e }, 'No User with this ID Found');
+        throw e;
+      }
+      this.logger.error({ e }, 'OOPS, Something Went Wrong!');
+      throw e;
     }
   }
 }
