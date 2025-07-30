@@ -77,7 +77,18 @@ export class UserService {
       throw new UnauthorizedException('Invalid Username or Password');
     }
     try {
-      const newToken = await this.jwtService.signAsync(
+      const accessToken = await this.jwtService.signAsync(
+        {
+          userId: userExists.id,
+          name: userExists.name,
+          email: userExists.email,
+          role: userExists.role,
+        },
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+      const refreshToken = await this.jwtService.signAsync(
         {
           userId: userExists.id,
           name: userExists.name,
@@ -92,7 +103,7 @@ export class UserService {
         { userId: userExists.id },
         'Successfully Validated a User',
       );
-      return newToken;
+      return { accessToken, refreshToken };
     } catch (e) {
       if (e instanceof NotFoundException) {
         this.logger.warn(e, 'No User Found!');

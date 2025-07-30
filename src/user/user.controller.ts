@@ -33,10 +33,16 @@ export class UserController {
     @Res({ passthrough: true }) res: Response,
   ) {
     try {
-      const token = await this.userService.validateUser(validateUserDto);
+      const tokens = await this.userService.validateUser(validateUserDto);
       const csrfToken = (req as any).csrfToken();
       res.cookie('XSRF-TOKEN', csrfToken);
-      res.cookie('token', token, {
+      res.cookie('access-token', tokens.accessToken, {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: true,
+        maxAge: 45 * 60 * 1000, // 45 minutes
+      });
+      res.cookie('refresh-token', tokens.refreshToken, {
         httpOnly: true,
         sameSite: 'lax',
         secure: true,
@@ -75,11 +81,11 @@ export class UserController {
     };
   }
 
-  @Throttle({default: {ttl: 60000, limit: 2}})
+  @Throttle({ default: { ttl: 60000, limit: 2 } })
   @Post('admin/make-admin')
-  @UseGuards(JWTCookieGuard,RolesGuard)
+  @UseGuards(JWTCookieGuard, RolesGuard)
   @Roles('ADMIN')
-  async makeAdmin(makeAdminDto: MakeAdminDto ){
+  async makeAdmin(@Body() makeAdminDto: MakeAdminDto) {
     return this.userService.makeAdmin(makeAdminDto);
   }
   @Throttle({ default: { ttl: 60000, limit: 30 } })
