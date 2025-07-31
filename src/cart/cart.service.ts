@@ -150,11 +150,13 @@ export class CartService {
       }
       if (e.message === 'No Default Shipping Address Found for the User') {
         this.logger.error(e, 'No Default Shipping Address Found for the User');
+        throw e;
       }
       this.logger.error(
         e,
         'OOPS, Something Went Wrong. Create Cart Service Failed',
       );
+      throw e;
     }
   }
 
@@ -227,7 +229,10 @@ export class CartService {
           quantity: updateItemDto.quantity,
         },
       });
-      this.logger.info({cartItemId: itemId},'CartItem Successfullly Updated!');
+      this.logger.info(
+        { cartItemId: itemId },
+        'CartItem Successfullly Updated!',
+      );
       return {
         message: 'Item successfully updated!',
       };
@@ -256,7 +261,10 @@ export class CartService {
           id: itemId,
         },
       });
-      this.logger.info({cartItemId: itemId},'Successfully Deleted the Cart!');
+      this.logger.info(
+        { cartItemId: itemId },
+        'Successfully Deleted the Cart!',
+      );
       return {
         message: 'Successfully Deleted!',
       };
@@ -285,7 +293,7 @@ export class CartService {
           id: cartId,
         },
       });
-      this.logger.info({cartId},'Successfully Deleted the Cart!');
+      this.logger.info({ cartId }, 'Successfully Deleted the Cart!');
       return {
         message: 'Successfully Deleted the Cart!',
       };

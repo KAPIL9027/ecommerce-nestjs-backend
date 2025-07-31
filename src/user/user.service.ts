@@ -14,6 +14,7 @@ import { ValidateUserDto } from './validate-user.dto';
 import { Prisma } from '@prisma/client';
 import { PinoLogger } from 'nestjs-pino';
 import { MakeAdminDto } from './make-admin.dto';
+import { Request } from 'express';
 
 @Injectable()
 export class UserService {
@@ -25,6 +26,39 @@ export class UserService {
     logger.setContext(UserService.name);
   }
 
+  async refresh(req: Request) {
+    try {
+      const refreshToken = req.cookies['refresh-token'];
+      const user = await this.jwtService.verifyAsync(refreshToken, {
+        secret: process.env.JWT_SECRET,
+      });
+      if (user) {
+        const newAccessToken = await this.jwtService.signAsync(
+          {
+            userId: user.userId,
+            name: user.name,
+            email: user.email,
+          },
+          {
+            secret: process.env.JWT_SECRET,
+          },
+        );
+        this.logger.info(
+          { userId: user.userId },
+          'Successfully fetched a new access-token',
+        );
+        return newAccessToken;
+      }
+      throw new UnauthorizedException('Invalid, Access Token Provided!');
+    } catch (e) {
+      if (e instanceof UnauthorizedException) {
+        this.logger.warn(e, 'Invalid Access Token Provided');
+        throw e;
+      }
+      this.logger.error(e, 'OOPS, Something Went Wrong!');
+      throw new InternalServerErrorException('OOPS, Something Went Wrong!');
+    }
+  }
   async createUser(dto: CreateUserDto) {
     try {
       const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -37,7 +71,17 @@ export class UserService {
         data: dataObj,
       });
 
-      const token = this.jwtService.sign(
+      const accessToken = this.jwtService.sign(
+        {
+          userId: user.id,
+          name: user.name,
+          email: user.email,
+        },
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+      const refreshToken = this.jwtService.sign(
         {
           userId: user.id,
           name: user.name,
@@ -48,7 +92,7 @@ export class UserService {
         },
       );
       this.logger.info({ userId: user.id }, 'User Created Successfully');
-      return token;
+      return { accessToken, refreshToken };
     } catch (e) {
       if (e instanceof Prisma.PrismaClientValidationError) {
         throw new BadRequestException(

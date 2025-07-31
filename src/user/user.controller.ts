@@ -24,6 +24,21 @@ import { MakeAdminDto } from './make-admin.dto';
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Throttle({ default: { ttl: 60000, limit: 1 } })
+  @Post('/refresh')
+  async refresh(@Req() req: Request, @Res({ passthrough: true }) res) {
+    const newAcessToken = await this.userService.refresh(req);
+    res.cookie('access-token', newAcessToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      maxAge: 1 * 60 * 1000, // 1 minutes
+    });
+    return {
+      message: 'Sucessfully created a new Access Token for you.',
+    };
+  }
+
   @Throttle({ default: { ttl: 60000, limit: 5 } })
   @Post('signin')
   @HttpCode(200)
@@ -40,7 +55,7 @@ export class UserController {
         httpOnly: true,
         sameSite: 'lax',
         secure: true,
-        maxAge: 45 * 60 * 1000, // 45 minutes
+        maxAge: 1 * 60 * 1000, // 1 minutes
       });
       res.cookie('refresh-token', tokens.refreshToken, {
         httpOnly: true,
@@ -66,14 +81,20 @@ export class UserController {
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
   ) {
-    const token = await this.userService.createUser(dto);
+    const tokens = await this.userService.createUser(dto);
     const csrfToken = (req as any).csrfToken();
     res.cookie('XSRF-TOKEN', csrfToken);
-    res.cookie('token', token, {
+    res.cookie('refresh-token', tokens.refreshToken, {
       httpOnly: true,
       sameSite: 'lax',
       secure: true,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
+    res.cookie('access-token', tokens.accessToken, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: true,
+      maxAge: 1 * 60 * 1000, // 1 minutes
     });
     return {
       message: 'Succesfully create a new user',
