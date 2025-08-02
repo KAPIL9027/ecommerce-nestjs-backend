@@ -26,7 +26,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Ecommerce API')
     .setDescription(
-      'This document contains all the endpoints that are needed for an ecommerce api such as product, variant, discount, discountcode, user, review, pdp, plp, shippingaddress, payment, cms. It uses the power of nestjs, prisma, postgreSQL, cloudinary to provide seamless, fast, secure experience. Please try the below available endpoints before intergrating this wonderful api with your application. Thanks, enjoy everything for free, now no need to use those costly apis. Most of the endpoints only allows authenticated users, so please signup/signin first. For the admin-only endpoints, contact an adminstrator who has the access to make you also an admin user.',
+      'This document contains all the endpoints that are needed for an ecommerce api such as product, variant, discount, discountcode, user, review, pdp, plp, shippingaddress, payment, cms. It uses the power of nestjs, prisma, postgreSQL, cloudinary to provide seamless, fast, secure experience. Please try the below available endpoints before intergrating this wonderful api with your application. Thanks, enjoy everything for free, now no need to use those costly apis. Most of the endpoints only allows authenticated users, so please signup/signin first and keep note of the csrf token as you will have to send it with every request and then make sure you hit the refresh endpoint to get new access token every 45 minutes.For the admin-only endpoints, contact an adminstrator who has the access to make you also an admin user.',
     )
     .setVersion('1.0')
     .addTag('ecommerce')
