@@ -16,6 +16,27 @@ export class CategoryService {
     private prismaService: PrismaService,
     private readonly logger: PinoLogger,
   ) {}
+  async getAllCategories() {
+    try {
+      const categories = await this.prismaService.category.findMany({
+        include: {
+          subcategories: {
+            include: {
+              subcategories: true,
+            },
+          },
+        },
+      });
+      this.logger.info({ categories }, 'Fetched all the categories');
+      return {
+        message: 'Fetched all the categories',
+        categories,
+      };
+    } catch (e) {
+      this.logger.error(e, 'OOPS, Something Went Wrong!');
+      throw new InternalServerErrorException('OOPS, Something Went Wrong!');
+    }
+  }
   async createCategory(categoryData: CreateCategoryDto) {
     try {
       let categoryObj = {
