@@ -21,6 +21,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { CustomThrottlerGuard } from './custom-throttler.guard';
 import { LoggerModule } from 'nestjs-pino';
+import { WishlistModule } from './wishlist/wishlist.module';
 
 const isProd = process.env.NODE_ENV === 'production' ? true : false;
 @Module({
@@ -66,6 +67,7 @@ const isProd = process.env.NODE_ENV === 'production' ? true : false;
     OrderModule,
     PaymentModule,
     ShippingAddressModule,
+    WishlistModule,
   ],
   controllers: [AppController],
   providers: [

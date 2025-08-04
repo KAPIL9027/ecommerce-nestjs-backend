@@ -60,19 +60,20 @@ model ProductOptionValue {
 }
 
 model ProductVariant {
-  id         String                 @id @default(uuid())
-  productId  String
-  product    Product                @relation(fields: [productId], references: [id])
-  cartItems  CartItem[]
-  orderItems OrderItem[]
-  sku        String                 @unique
-  price      Float
-  stock      Int
-  options    ProductVariantOption[]
-  images     Image[]
-  discounts  Discount[]             @relation("VariantsDiscounts")
-  createdAt  DateTime               @default(now())
-  updatedAt  DateTime               @updatedAt
+  id            String                 @id @default(uuid())
+  productId     String
+  product       Product                @relation(fields: [productId], references: [id])
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  sku           String                 @unique
+  price         Float
+  stock         Int
+  options       ProductVariantOption[]
+  images        Image[]
+  discounts     Discount[]             @relation("VariantsDiscounts")
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  wishlistItems WishlistItem[]
 }
 
 model Category {
@@ -87,6 +88,14 @@ model Category {
   discounts     Discount[] @relation("CategoriesDiscounts")
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
+}
+
+model WishlistItem {
+  id               String         @id @default(uuid())
+  userId           String         @unique
+  user             User           @relation(fields: [userId], references: [id])
+  product          ProductVariant @relation(fields: [productVariantId], references: [id])
+  productVariantId String
 }
 
 model Review {
@@ -113,9 +122,9 @@ model User {
   reviews           Review[]
   orders            Order[]
   cart              Cart?
+  wishlist          WishlistItem[]
   discountCode      DiscountCode[]
   shippingAddresses ShippingAddress[]
-  // Add wishlist, orders etc.
 }
 
 enum UserRole {
