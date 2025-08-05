@@ -21,6 +21,7 @@ export class JWTCookieGuard implements CanActivate {
         secret: process.env.JWT_SECRET,
       });
       req.user = decoded;
+      console.log('user', req.user);
       return true;
     } catch {
       throw new UnauthorizedException('Invalid token');

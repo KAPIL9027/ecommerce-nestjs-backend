@@ -32,7 +32,7 @@ export class UserController {
       httpOnly: true,
       sameSite: 'lax',
       secure: true,
-      maxAge: 1 * 60 * 1000, // 1 minutes
+      maxAge: 45 * 60 * 1000, // 1 minutes
     });
     return {
       message: 'Sucessfully created a new Access Token for you.',
@@ -55,7 +55,7 @@ export class UserController {
         httpOnly: true,
         sameSite: 'lax',
         secure: true,
-        maxAge: 1 * 60 * 1000, // 1 minutes
+        maxAge: 45 * 60 * 1000, // 1 minutes
       });
       res.cookie('refresh-token', tokens.refreshToken, {
         httpOnly: true,
@@ -94,7 +94,7 @@ export class UserController {
       httpOnly: true,
       sameSite: 'lax',
       secure: true,
-      maxAge: 1 * 60 * 1000, // 1 minutes
+      maxAge: 45 * 60 * 1000, // 1 minutes
     });
     return {
       message: 'Succesfully create a new user',
