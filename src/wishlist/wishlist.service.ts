@@ -25,6 +25,9 @@ export class WishlistService {
         where: {
           userId: req.user!.userId,
         },
+        include: {
+          product: true,
+        },
       });
       return {
         message: 'Successfully Fetched all the Wishlisted Items.',
@@ -103,7 +106,7 @@ export class WishlistService {
           e,
           'No WishlistItem/User Found with the given Id Provided.',
         );
-        throw e;
+        throw new NotFoundException('No WishlistItem Found with this ID!');
       }
       this.logger.error(e, 'OOPS, Something Went Wrong!');
       throw new InternalServerErrorException('OOPS, Something Went Wrong!');
